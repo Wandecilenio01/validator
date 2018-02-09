@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/wandecilenio/validator"
+	"github.com/Wandecilenio01/validator"
 )
 
 // MyModel - just to make one test
@@ -15,9 +15,7 @@ type MyModel struct {
 
 func main() {
 	fmt.Println("Hello there!!!")
-
 	onePerson := MyModel{1, "Wandecilenio", 21}
-
 	errors := validator.Validate(onePerson)
 	if len(errors) > 0 {
 		for eindex, err := range errors {

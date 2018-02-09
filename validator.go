@@ -8,57 +8,38 @@ import (
 
 const (
 	// TAG - will stay presence in struct to apply the validators
-	TAG = "struct-validator"
+	TAG_NAME       = "struct-validator"
+	PARAM_MIN_NAME = "min"
+	PARAM_MAX_NAME = "max"
 )
 
 // Validate - will validate all structs with the tag "struct-validator" that you pass by argument
-func Validate(st interface{}) (errors []error) {
+func Validate(st interface{}) []error {
+	var errors []error
 	stValue := reflect.ValueOf(st)
 	for i := 0; i < stValue.NumField(); i++ {
-		if tag := stValue.Type().Field(i).Tag.Get(TAG); tag == "" || tag == "-" {
-			continue
-		} else {
-			e := checkValidations(tag, stValue.Type().Field(i).Name, stValue.Field(i).Interface())
-			if len(e) > 0 {
-				for _, a := range e {
-					errors = append(errors, a)
-				}
-			}
-		}
+		field := stValue.Type().Field(i)
+		errors = append(errors, checkValidations(field.Tag.Get(TAG_NAME), field.Name, stValue.Field(i).Interface())...)
 	}
-
 	return errors
 }
 
 // checkValidations - will make a parse in string of validations
 func checkValidations(validators string, field string, value interface{}) (errors []error) {
-	for _, kindTest := range strings.Split(validators, ";") {
-		testParams := strings.Split(kindTest, ",")
-		test := testParams[0]
-		p := testParams[1:len(testParams)]
-		params := make(map[string]interface{})
-		for _, p1 := range p {
-			p2 := strings.Split(p1, "=")
-			if len(p2) > 0 {
-				params[p2[0]] = p2[1]
+	if paramsTest := strings.Split(validators, ","); len(paramsTest) > 0 {
+		typeName := paramsTest[0]
+		if types[typeName] == nil {
+			errors = append(errors, fmt.Errorf("Validator %s not registered", typeName))
+		} else {
+			paramsTestMap := make(map[string]interface{})
+			for _, paramTest := range paramsTest[1:] {
+				if parts := strings.Split(paramTest, "="); len(parts) == 2 {
+					paramsTestMap[parts[0]] = parts[1]
+				} else {
+					paramsTestMap[parts[0]] = true
+				}
 			}
-		}
-
-		nameFn := test
-		if Types[nameFn] == nil {
-			nameFn = "CUSTOM_" + nameFn
-		}
-
-		if Types[nameFn] == nil {
-			errors = append(errors, fmt.Errorf("Validator %s not registered", test))
-			continue
-		}
-
-		e := Types[nameFn](value, params)
-		if len(e) > 0 {
-			for _, a := range e {
-				errors = append(errors, a)
-			}
+			errors = append(errors, types[typeName](value, paramsTestMap)...)
 		}
 	}
 	return errors

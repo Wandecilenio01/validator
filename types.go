@@ -2,44 +2,32 @@ package validator
 
 import (
 	"fmt"
-	"strconv"
 )
 
 // Types - all types registered to validate the struct
-var Types map[string](func(interface{}, map[string]interface{}) []error)
+var types map[string](func(interface{}, map[string]interface{}) []error)
 
 func init() {
-	Types = make(map[string](func(interface{}, map[string]interface{}) []error))
-	Types["numeric_float32"] = func(value interface{}, params map[string]interface{}) (errors []error) {
-		if params["min"] != nil {
-			min, _ := strconv.Atoi(params["min"].(string))
-			if value.(float32) < float32(min) {
-				errors = append(errors, fmt.Errorf("The value cannot be less than %d", min))
-			}
-		}
+	types = make(map[string](func(interface{}, map[string]interface{}) []error))
+	defineTypes()
+}
 
-		if params["max"] != nil {
-			max, _ := strconv.Atoi(params["max"].(string))
-			if value.(float32) > float32(max) {
-				errors = append(errors, fmt.Errorf("The value cannot be greater than %d", max))
-			}
+func defineTypes() {
+	types["float32"] = func(value interface{}, params map[string]interface{}) (errors []error) {
+		if min := params[PARAM_MIN_NAME]; min != nil && value.(float32) < min.(float32) {
+			errors = append(errors, fmt.Errorf("The value cannot be less than %d", min))
+		}
+		if max := params[PARAM_MAX_NAME]; max != nil && value.(float32) > max.(float32) {
+			errors = append(errors, fmt.Errorf("The value cannot be greater than %d", max))
 		}
 		return errors
 	}
-
-	Types["numeric_float64"] = func(value interface{}, params map[string]interface{}) (errors []error) {
-		if params["min"] != nil {
-			min, _ := strconv.Atoi(params["min"].(string))
-			if value.(float64) < float64(min) {
-				errors = append(errors, fmt.Errorf("The value cannot be less than %d", min))
-			}
+	types["float64"] = func(value interface{}, params map[string]interface{}) (errors []error) {
+		if min := params[PARAM_MIN_NAME]; min != nil && value.(float64) < min.(float64) {
+			errors = append(errors, fmt.Errorf("The value cannot be less than %d", min))
 		}
-
-		if params["max"] != nil {
-			max, _ := strconv.Atoi(params["max"].(string))
-			if value.(float64) > float64(max) {
-				errors = append(errors, fmt.Errorf("The value cannot be greater than %d", max))
-			}
+		if max := params[PARAM_MAX_NAME]; max != nil && value.(float64) > max.(float64) {
+			errors = append(errors, fmt.Errorf("The value cannot be greater than %d", max))
 		}
 		return errors
 	}
@@ -47,10 +35,10 @@ func init() {
 
 // AddCustomValidator - will add one custom validator
 func AddCustomValidator(name string, validateFn func(interface{}, map[string]interface{}) []error) {
-	Types["CUSTOM_"+name] = validateFn
+	types[name] = validateFn
 }
 
 // DelCustomValidator - will remove one custom validator
 func DelCustomValidator(name string) {
-	delete(Types, "CUSTOM_"+name)
+	delete(types, name)
 }
