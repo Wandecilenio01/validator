@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"time"
 )
+
+const TIMESTAMPS_DEFAULT_FORMAT = "2006-01-02 15:04:05"
 
 type MessageInput struct {
 	FieldName        string
@@ -126,6 +129,42 @@ func defineTypes() {
 			return generateErrorMessage(messageInput)
 		}
 		return nil
+	}
+	//date
+	types["timestamp"] = make(map[string](func(MessageInput) error))
+	types["timestamp"]["after"] = func(messageInput MessageInput) error {
+		PanicOnEmptyRuleValue("after", messageInput.RuleValue)
+		ruleValueTime, err := time.Parse(TIMESTAMPS_DEFAULT_FORMAT, messageInput.RuleValue)
+		if err != nil {
+			return err
+		}
+		if messageInput.FieldValue.(time.Time).After(ruleValueTime) {
+			return nil
+		}
+		return generateErrorMessage(messageInput)
+	}
+	types["timestamp"]["before"] = func(messageInput MessageInput) error {
+		PanicOnEmptyRuleValue("before", messageInput.RuleValue)
+		ruleValueTime, err := time.Parse(TIMESTAMPS_DEFAULT_FORMAT, messageInput.RuleValue)
+		if err != nil {
+			return err
+		}
+		if messageInput.FieldValue.(time.Time).Before(ruleValueTime) {
+			return nil
+		}
+		return generateErrorMessage(messageInput)
+	}
+	types["timestamp"]["before_or_equal"] = func(messageInput MessageInput) error {
+		PanicOnEmptyRuleValue("before_or_equal", messageInput.RuleValue)
+		ruleValueTime, err := time.Parse(TIMESTAMPS_DEFAULT_FORMAT, messageInput.RuleValue)
+		if err != nil {
+			return err
+		}
+		fieldValueTime := messageInput.FieldValue.(time.Time)
+		if fieldValueTime.Before(ruleValueTime) || fieldValueTime.Equal(ruleValueTime) {
+			return nil
+		}
+		return generateErrorMessage(messageInput)
 	}
 }
 
