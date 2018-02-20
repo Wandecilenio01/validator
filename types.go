@@ -1,9 +1,11 @@
 package validator
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -14,6 +16,14 @@ const (
 	TimestampDefaultFormat = "2006-1-2 15:4:5"
 	// TimestampDateDefaultFormat -
 	TimestampDateDefaultFormat = "2006-1-2"
+	// EmailRegex -
+	EmailRegex = "^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$"
+	// URLRegex -
+	URLRegex = "^((http[s]?|ftp):\\/)?\\/?([^:\\/\\s]+)((\\/\\w+)*\\/)([\\w\\-\\.]+[^#?\\s]+)(.*)?(#[\\w\\-]+)?$"
+	// IPv4Regex -
+	IPv4Regex = "((25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2})[.](25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2})[.](25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2})[.](25[0-5]|2[0-4][0-9]|[0-1]?[0-9]{1,2}))"
+	// IPv6Regex -
+	// IPv6Regex = ""
 )
 
 // MessageInput - Input struct used
@@ -137,11 +147,50 @@ func defineTypes() {
 		}
 		return nil
 	}
+	types["string"]["min"] = func(messageInput MessageInput) error {
+		PanicOnEmptyRuleValue("min", messageInput.RuleValue)
+		if int64(len(messageInput.FieldValue.(string))) < getIntFromString(messageInput.RuleValue) {
+			return generateErrorMessage(messageInput)
+		}
+		return nil
+	}
+	types["string"]["email"] = func(messageInput MessageInput) error {
+		if regexp.MustCompile(EmailRegex).MatchString(messageInput.FieldValue.(string)) {
+			return nil
+		}
+		return generateErrorMessage(messageInput)
+	}
+	types["string"]["url"] = func(messageInput MessageInput) error {
+		if regexp.MustCompile(URLRegex).MatchString(messageInput.FieldValue.(string)) {
+			return nil
+		}
+		return generateErrorMessage(messageInput)
+	}
+	types["string"]["ipv4"] = func(messageInput MessageInput) error {
+		if regexp.MustCompile(IPv4Regex).MatchString(messageInput.FieldValue.(string)) {
+			return nil
+		}
+		return generateErrorMessage(messageInput)
+	}
+	types["string"]["json"] = func(messageInput MessageInput) error {
+		var temp interface{}
+		if json.Unmarshal([]byte(messageInput.FieldValue.(string)), &temp) == nil {
+			return nil
+		}
+		return generateErrorMessage(messageInput)
+	}
+	// types["string"]["ipv6"] = func(messageInput MessageInput) error {
+	// 	if regexp.MustCompile(IPv6Regex).MatchString(messageInput.FieldValue.(string)) {
+	// 		return nil
+	// 	}
+	// 	return generateErrorMessage(messageInput)
+	// }
 	//date INCOMPLETE
 	// today
 	// after, after_date, equal, equal_date, before, before_equal
 	types["timestamp"] = make(map[string](func(MessageInput) error))
 	types["timestamp"]["after"] = func(messageInput MessageInput) error {
+		PanicOnEmptyRuleValue("after", messageInput.RuleValue)
 		ruleValueTime := getTimestampFromRuleString(messageInput.RuleValue)
 		fieldValueTime := messageInput.FieldValue.(time.Time)
 		if fieldValueTime.After(getTimestampFromRuleString(messageInput.RuleValue)) {
@@ -152,6 +201,7 @@ func defineTypes() {
 		return generateErrorMessage(messageInput)
 	}
 	types["timestamp"]["after_date"] = func(messageInput MessageInput) error {
+		PanicOnEmptyRuleValue("after_date", messageInput.RuleValue)
 		fieldValueTime := truncateTime(messageInput.FieldValue.(time.Time))
 		ruleValueTime := getTimestampFromRuleString(messageInput.RuleValue)
 		if fieldValueTime.After(ruleValueTime) {
@@ -162,6 +212,7 @@ func defineTypes() {
 		return generateErrorMessage(messageInput)
 	}
 	types["timestamp"]["before"] = func(messageInput MessageInput) error {
+		PanicOnEmptyRuleValue("before", messageInput.RuleValue)
 		ruleValueTime := getTimestampFromRuleString(messageInput.RuleValue)
 		fieldValueTime := messageInput.FieldValue.(time.Time)
 		if fieldValueTime.Before(ruleValueTime) {
@@ -172,6 +223,7 @@ func defineTypes() {
 		return generateErrorMessage(messageInput)
 	}
 	types["timestamp"]["before_date"] = func(messageInput MessageInput) error {
+		PanicOnEmptyRuleValue("before_date", messageInput.RuleValue)
 		ruleValueTime := truncateTime(getTimestampFromRuleString(messageInput.RuleValue))
 		fieldValueTime := messageInput.FieldValue.(time.Time)
 		if fieldValueTime.Before(ruleValueTime) {
@@ -182,6 +234,7 @@ func defineTypes() {
 		return generateErrorMessage(messageInput)
 	}
 	types["timestamp"]["equal_date"] = func(messageInput MessageInput) error {
+		PanicOnEmptyRuleValue("equal_date", messageInput.RuleValue)
 		ruleValueTime := truncateTime(getTimestampFromRuleString(messageInput.RuleValue))
 		fieldValueTime := truncateTime(messageInput.FieldValue.(time.Time))
 		if fieldValueTime.Equal(ruleValueTime) {
@@ -192,6 +245,7 @@ func defineTypes() {
 		return generateErrorMessage(messageInput)
 	}
 	types["timestamp"]["equal"] = func(messageInput MessageInput) error {
+		PanicOnEmptyRuleValue("equal", messageInput.RuleValue)
 		ruleValueTime := getTimestampFromRuleString(messageInput.RuleValue)
 		fieldValueTime := messageInput.FieldValue.(time.Time)
 		if fieldValueTime.Equal(ruleValueTime) {
@@ -200,6 +254,34 @@ func defineTypes() {
 		messageInput.RuleValue = ruleValueTime.Format(TimestampDefaultFormat)
 		messageInput.FieldValue = fieldValueTime.Format(TimestampDefaultFormat)
 		return generateErrorMessage(messageInput)
+	}
+	types["timestamp"]["after_or_equal"] = func(messageInput MessageInput) error {
+		err := types["timestamp"]["after"](messageInput)
+		if err != nil {
+			return types["timestamp"]["equal"](messageInput)
+		}
+		return nil
+	}
+	types["timestamp"]["before_or_equal"] = func(messageInput MessageInput) error {
+		err := types["timestamp"]["before"](messageInput)
+		if err != nil {
+			return types["timestamp"]["equal"](messageInput)
+		}
+		return nil
+	}
+	types["timestamp"]["after_or_equal_date"] = func(messageInput MessageInput) error {
+		err := types["timestamp"]["after_date"](messageInput)
+		if err != nil {
+			return types["timestamp"]["equal_date"](messageInput)
+		}
+		return nil
+	}
+	types["timestamp"]["before_or_equal_date"] = func(messageInput MessageInput) error {
+		err := types["timestamp"]["before_date"](messageInput)
+		if err != nil {
+			return types["timestamp"]["equal_date"](messageInput)
+		}
+		return nil
 	}
 }
 
@@ -227,7 +309,7 @@ func getUintFromString(value string) uint64 {
 func getTimestampFromRuleString(value string) time.Time {
 	parts := strings.Split(value, "+")
 	if parts[0] != "today" {
-		panic("Error: The rule value should be 'today' or 'today+1' ... ")
+		panic("Error: The rule value should to be today or today+1 or today+2 or ... ")
 	}
 	if len(parts) == 2 {
 		days, err := strconv.Atoi(parts[1])

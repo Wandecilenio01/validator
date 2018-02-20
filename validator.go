@@ -60,8 +60,6 @@ func checkValidations(tags string, messageInput MessageInput) (errors []error) {
 			messageInput.RuleName = parts[0]
 			if len(parts) == 2 {
 				messageInput.RuleValue = parts[1]
-			} else {
-				messageInput.RuleValue = "1"
 			}
 			//get errors
 			if types[messageInput.ValidatorKeyType][messageInput.RuleName] == nil {
