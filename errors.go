@@ -22,6 +22,17 @@ func init() {
 			"min": "The {{.fieldName}} cannot have length less than {{.ruleValue}}, the length of informed value was {{.value}}.",
 			"max": "The {{.fieldName}} cannot have length greater than {{.ruleValue}}, the length of informed value was {{.value}}.",
 		},
+		//timestamp
+		"timestamp": map[string]string{
+			"equal":           "The {{.fieldName}} have to be equals to {{.ruleValue}}, the timestamp informed was {{.value}}.",
+			"after":           "The {{.fieldName}} have to be after {{.ruleValue}}, the timestamp informed was {{.value}}.",
+			"before":          "The {{.fieldName}} have to be before {{.ruleValue}}, the timestamp informed was {{.value}}.",
+			"equal_date":      "The {{.fieldName}} have to be equals to {{.ruleValue}}, the date informed was {{.value}}.",
+			"after_date":      "The {{.fieldName}} have to be after {{.ruleValue}}, the date informed was {{.value}}.",
+			"before_date":     "The {{.fieldName}} have to be before {{.ruleValue}}, the date informed was {{.value}}.",
+			"after_or_equal":  "The {{.fieldName}} have to be after or equals to {{.ruleValue}}, the timestamp informed was {{.value}}.",
+			"before_or_equal": "The {{.fieldName}} have to be before or equals to {{.ruleValue}}, the timestamp informed was {{.value}}.",
+		},
 	}
 }
 

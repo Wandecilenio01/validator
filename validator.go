@@ -26,7 +26,7 @@ func Validate(st interface{}, messages map[string]map[string]string) (errors []e
 			FieldName:      field.Name,
 			FieldValue:     stValue.Field(i).Interface(),
 			CustomMessages: messages,
-			FieldKind:      field.Type.Kind(),
+			FieldType:      field.Type,
 		})...)
 	}
 	return errors
@@ -36,12 +36,17 @@ func Validate(st interface{}, messages map[string]map[string]string) (errors []e
 func checkValidations(tags string, messageInput MessageInput) (errors []error) {
 	//get key type
 	//if is a number
-	if fieldKindType := messageInput.FieldKind; fieldKindType >= reflect.Int && fieldKindType <= reflect.Float64 {
+	if fieldKindType := messageInput.FieldType.Kind(); fieldKindType >= reflect.Int && fieldKindType <= reflect.Float64 {
 		messageInput.ValidatorKeyType = "numeric"
 	} else if fieldKindType == reflect.String {
 		messageInput.ValidatorKeyType = "string"
 	} else {
-		return errors
+		//structs
+		if messageInput.FieldType.String() == "time.Time" {
+			messageInput.ValidatorKeyType = "timestamp"
+		} else {
+			return errors
+		}
 	}
 	if types[messageInput.ValidatorKeyType] == nil {
 		panic(fmt.Sprintf("The validator '%s' does not exists", messageInput.ValidatorKeyType))
@@ -51,7 +56,7 @@ func checkValidations(tags string, messageInput MessageInput) (errors []error) {
 		rules := strings.Split(tags, "|")
 		for _, rule := range rules {
 			//if rule has value
-			parts := strings.Split(rule, ":")
+			parts := strings.Split(strings.Replace(rule, " ", "", -1), ":")
 			messageInput.RuleName = parts[0]
 			if len(parts) == 2 {
 				messageInput.RuleValue = parts[1]

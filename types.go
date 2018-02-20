@@ -5,14 +5,21 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 )
 
-const TIMESTAMPS_DEFAULT_FORMAT = "2006-01-02 15:04:05"
+const (
+	// TimestampDefaultFormat -
+	TimestampDefaultFormat = "2006-1-2 15:4:5"
+	// TimestampDateDefaultFormat -
+	TimestampDateDefaultFormat = "2006-1-2"
+)
 
+// MessageInput - Input struct used
 type MessageInput struct {
 	FieldName        string
-	FieldKind        reflect.Kind
+	FieldType        reflect.Type
 	ValidatorKeyType string
 	FieldValue       interface{}
 	RuleName         string
@@ -109,14 +116,14 @@ func defineTypes() {
 	types["numeric"] = make(map[string](func(MessageInput) error))
 	types["numeric"]["min"] = func(messageInput MessageInput) error {
 		PanicOnEmptyRuleValue("min", messageInput.RuleValue)
-		if lessCompareNumbers(messageInput.FieldValue, messageInput.RuleValue, messageInput.FieldKind) {
+		if lessCompareNumbers(messageInput.FieldValue, messageInput.RuleValue, messageInput.FieldType.Kind()) {
 			return nil
 		}
 		return generateErrorMessage(messageInput)
 	}
 	types["numeric"]["max"] = func(messageInput MessageInput) error {
 		PanicOnEmptyRuleValue("max", messageInput.RuleValue)
-		if moreCompareNumbers(messageInput.FieldValue, messageInput.RuleValue, messageInput.FieldKind) {
+		if moreCompareNumbers(messageInput.FieldValue, messageInput.RuleValue, messageInput.FieldType.Kind()) {
 			return nil
 		}
 		return generateErrorMessage(messageInput)
@@ -130,40 +137,68 @@ func defineTypes() {
 		}
 		return nil
 	}
-	//date
+	//date INCOMPLETE
+	// today
+	// after, after_date, equal, equal_date, before, before_equal
 	types["timestamp"] = make(map[string](func(MessageInput) error))
 	types["timestamp"]["after"] = func(messageInput MessageInput) error {
-		PanicOnEmptyRuleValue("after", messageInput.RuleValue)
-		ruleValueTime, err := time.Parse(TIMESTAMPS_DEFAULT_FORMAT, messageInput.RuleValue)
-		if err != nil {
-			return err
-		}
-		if messageInput.FieldValue.(time.Time).After(ruleValueTime) {
+		ruleValueTime := getTimestampFromRuleString(messageInput.RuleValue)
+		fieldValueTime := messageInput.FieldValue.(time.Time)
+		if fieldValueTime.After(getTimestampFromRuleString(messageInput.RuleValue)) {
 			return nil
 		}
+		messageInput.RuleValue = ruleValueTime.Format(TimestampDefaultFormat)
+		messageInput.FieldValue = fieldValueTime.Format(TimestampDefaultFormat)
+		return generateErrorMessage(messageInput)
+	}
+	types["timestamp"]["after_date"] = func(messageInput MessageInput) error {
+		fieldValueTime := truncateTime(messageInput.FieldValue.(time.Time))
+		ruleValueTime := getTimestampFromRuleString(messageInput.RuleValue)
+		if fieldValueTime.After(ruleValueTime) {
+			return nil
+		}
+		messageInput.RuleValue = ruleValueTime.Format(TimestampDateDefaultFormat)
+		messageInput.FieldValue = fieldValueTime.Format(TimestampDateDefaultFormat)
 		return generateErrorMessage(messageInput)
 	}
 	types["timestamp"]["before"] = func(messageInput MessageInput) error {
-		PanicOnEmptyRuleValue("before", messageInput.RuleValue)
-		ruleValueTime, err := time.Parse(TIMESTAMPS_DEFAULT_FORMAT, messageInput.RuleValue)
-		if err != nil {
-			return err
-		}
-		if messageInput.FieldValue.(time.Time).Before(ruleValueTime) {
+		ruleValueTime := getTimestampFromRuleString(messageInput.RuleValue)
+		fieldValueTime := messageInput.FieldValue.(time.Time)
+		if fieldValueTime.Before(ruleValueTime) {
 			return nil
 		}
+		messageInput.RuleValue = ruleValueTime.Format(TimestampDefaultFormat)
+		messageInput.FieldValue = fieldValueTime.Format(TimestampDefaultFormat)
 		return generateErrorMessage(messageInput)
 	}
-	types["timestamp"]["before_or_equal"] = func(messageInput MessageInput) error {
-		PanicOnEmptyRuleValue("before_or_equal", messageInput.RuleValue)
-		ruleValueTime, err := time.Parse(TIMESTAMPS_DEFAULT_FORMAT, messageInput.RuleValue)
-		if err != nil {
-			return err
-		}
+	types["timestamp"]["before_date"] = func(messageInput MessageInput) error {
+		ruleValueTime := truncateTime(getTimestampFromRuleString(messageInput.RuleValue))
 		fieldValueTime := messageInput.FieldValue.(time.Time)
-		if fieldValueTime.Before(ruleValueTime) || fieldValueTime.Equal(ruleValueTime) {
+		if fieldValueTime.Before(ruleValueTime) {
 			return nil
 		}
+		messageInput.RuleValue = ruleValueTime.Format(TimestampDateDefaultFormat)
+		messageInput.FieldValue = fieldValueTime.Format(TimestampDateDefaultFormat)
+		return generateErrorMessage(messageInput)
+	}
+	types["timestamp"]["equal_date"] = func(messageInput MessageInput) error {
+		ruleValueTime := truncateTime(getTimestampFromRuleString(messageInput.RuleValue))
+		fieldValueTime := truncateTime(messageInput.FieldValue.(time.Time))
+		if fieldValueTime.Equal(ruleValueTime) {
+			return nil
+		}
+		messageInput.RuleValue = ruleValueTime.Format(TimestampDateDefaultFormat)
+		messageInput.FieldValue = fieldValueTime.Format(TimestampDateDefaultFormat)
+		return generateErrorMessage(messageInput)
+	}
+	types["timestamp"]["equal"] = func(messageInput MessageInput) error {
+		ruleValueTime := getTimestampFromRuleString(messageInput.RuleValue)
+		fieldValueTime := messageInput.FieldValue.(time.Time)
+		if fieldValueTime.Equal(ruleValueTime) {
+			return nil
+		}
+		messageInput.RuleValue = ruleValueTime.Format(TimestampDefaultFormat)
+		messageInput.FieldValue = fieldValueTime.Format(TimestampDefaultFormat)
 		return generateErrorMessage(messageInput)
 	}
 }
@@ -187,4 +222,23 @@ func getUintFromString(value string) uint64 {
 		return convertedValue
 	}
 	panic("Error: " + value + "is not a valid Uint")
+}
+
+func getTimestampFromRuleString(value string) time.Time {
+	parts := strings.Split(value, "+")
+	if parts[0] != "today" {
+		panic("Error: The rule value should be 'today' or 'today+1' ... ")
+	}
+	if len(parts) == 2 {
+		days, err := strconv.Atoi(parts[1])
+		if err == nil {
+			return time.Now().AddDate(0, 0, days)
+		}
+		panic(err)
+	}
+	return time.Now()
+}
+
+func truncateTime(valueTime time.Time) time.Time {
+	return new(time.Time).AddDate(valueTime.Year()-1, int(valueTime.Month())-1, valueTime.Day()-1)
 }
