@@ -32,27 +32,39 @@ func Validate(st interface{}, messages map[string]map[string]string) (errors []e
 	return errors
 }
 
-// Will make a parse in string of validations
-func checkValidations(tags string, messageInput MessageInput) (errors []error) {
-	//get key type
-	//if is a number
-	if fieldKindType := messageInput.FieldType.Kind(); fieldKindType >= reflect.Int && fieldKindType <= reflect.Float64 {
-		messageInput.ValidatorKeyType = "numeric"
-	} else if fieldKindType == reflect.String {
-		messageInput.ValidatorKeyType = "string"
+func getValidatorKeyType(typeName string) string {
+	if parts := strings.Split(typeName, "[]"); len(parts) == 2 {
+		switch parts[1] {
+		case "int", "int64", "int32", "int16", "int8", "uint", "uint64", "uint32", "uint16", "uint8", "uintptr", "float32", "float64":
+			return "array_numeric"
+		case "bool":
+			return "array_boolean"
+		case "string":
+			return "array_string"
+		case "time.Time":
+			return "array_timestamp"
+		default:
+			return ""
+		}
 	} else {
-		//structs
-		if messageInput.FieldType.String() == "time.Time" {
-			messageInput.ValidatorKeyType = "timestamp"
-		} else {
-			return errors
+		switch typeName {
+		case "int", "int64", "int32", "int16", "int8", "uint", "uint64", "uint32", "uint16", "uint8", "uintptr", "float32", "float64":
+			return "numeric"
+		case "string":
+			return "string"
+		case "time.Time":
+			return "timestamp"
+		default:
+			return ""
 		}
 	}
-	if types[messageInput.ValidatorKeyType] == nil {
-		panic(fmt.Sprintf("The validator '%s' does not exists", messageInput.ValidatorKeyType))
-	}
-	// get rules from field
-	if len(tags) > 0 {
+}
+
+// Will make a parse in string of validations
+func checkValidations(tags string, messageInput MessageInput) (errors []error) {
+	// get validator key
+	if messageInput.ValidatorKeyType = getValidatorKeyType(messageInput.FieldType.String()); messageInput.ValidatorKeyType != "" && len(tags) > 0 {
+		// get rules from field
 		rules := strings.Split(tags, "|")
 		for _, rule := range rules {
 			//if rule has value

@@ -3,7 +3,7 @@ package validator
 import (
 	"bytes"
 	"errors"
-	"html/template"
+	"text/template"
 )
 
 var (
@@ -21,11 +21,19 @@ func init() {
 		"string": map[string]string{
 			"min":   "The {{.fieldName}} cannot have length less than {{.ruleValue}}, the length of informed value was {{.value}}.",
 			"max":   "The {{.fieldName}} cannot have length greater than {{.ruleValue}}, the length of informed value was {{.value}}.",
-			"email": "The {{.fieldName}} is not a valid {{.ruleValue}}, the informed value was {{.value}}.",
-			"url":   "The {{.fieldName}} is not a valid {{.ruleValue}}, the informed value was {{.value}}.",
-			"ipv4":  "The {{.fieldName}} is not a valid {{.ruleValue}}, the informed value was {{.value}}.",
+			"email": "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was {{.value}}.",
+			"url":   "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was {{.value}}.",
+			"ipv4":  "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was {{.value}}.",
 			// "ipv6":  "The {{.fieldName}} is not a valid {{.ruleValue}}, the informed value was {{.value}}.",
-			"json": "The {{.fieldName}} is not a valid {{.ruleValue}}, the informed value was {{.value}}.",
+			"json":             "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was {{.value}}.",
+			"alpha":            "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was {{.value}}.",
+			"alpha_dash":       "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was {{.value}}.",
+			"alpha_num":        "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was {{.value}}.",
+			"alpha_space":      "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was {{.value}}.",
+			"alpha_dash_space": "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was {{.value}}.",
+			"alpha_num_space":  "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was {{.value}}.",
+			"length":           "The {{.fieldName}} cannot have length different than {{.ruleValue}}, the length of informed value was {{.value}}.",
+			"regex":            "The {{.fieldName}} is not a valid {{.ruleName}}:{{.ruleValue}} , the informed value was {{.value}}.",
 		},
 		//timestamp
 		"timestamp": map[string]string{
@@ -43,12 +51,14 @@ func init() {
 	}
 }
 
-func generateErrorMessage(messageInput MessageInput) error {
+// GenerateErrorMessage -
+func GenerateErrorMessage(messageInput MessageInput) error {
 	//theres some message for the rule
 	if messageInput.CustomMessages["all"] != nil && messageInput.CustomMessages["all"][messageInput.RuleName] != "" {
 		messageInput.ValidatorKeyType = "all"
 		return templateErrorMessage(messageInput)
 	} else if messageInput.CustomMessages[messageInput.FieldName] != nil && messageInput.CustomMessages[messageInput.FieldName][messageInput.RuleName] != "" {
+		messageInput.ValidatorKeyType = messageInput.FieldName
 		return templateErrorMessage(messageInput)
 	}
 	messageInput.CustomMessages = nativeMessages
@@ -57,7 +67,7 @@ func generateErrorMessage(messageInput MessageInput) error {
 
 func templateErrorMessage(messageInput MessageInput) error {
 	var errorMessage bytes.Buffer
-	if err := template.Must(template.New("ErrorMessageTemplate").Parse(messageInput.CustomMessages[messageInput.ValidatorKeyType][messageInput.RuleName])).Execute(&errorMessage, map[string]interface{}{"fieldName": messageInput.FieldName, "value": messageInput.FieldValue, "ruleValue": messageInput.RuleValue}); err != nil {
+	if err := template.Must(template.New("ErrorMessageTemplate").Parse(messageInput.CustomMessages[messageInput.ValidatorKeyType][messageInput.RuleName])).Execute(&errorMessage, map[string]interface{}{"fieldName": messageInput.FieldName, "value": messageInput.FieldValue, "ruleValue": messageInput.RuleValue, "ruleName": messageInput.RuleName}); err != nil {
 		panic(err)
 	}
 	return errors.New(errorMessage.String())
