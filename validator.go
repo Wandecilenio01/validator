@@ -17,6 +17,7 @@ var nativeValidators = map[string][]string{
 	"string":  []string{"min", "max"},
 }
 
+// relation between golang type names and 'validators key types'
 var nativeValidatorsKeyType = map[string]string{
 	"int":       "numeric",
 	"int64":     "numeric",

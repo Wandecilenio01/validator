@@ -7,17 +7,19 @@ import (
 )
 
 var (
+	// nativeMessages - relations between 'validator key type' and 'rule' and 'message'
 	nativeMessages map[string]map[string]string
 )
 
+// definition of nativeMessages attr
 func init() {
 	nativeMessages = map[string]map[string]string{
-		// int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64
+		// int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, uintptr, float32, float64
 		"numeric": map[string]string{
 			"min": "The {{.fieldName}} cannot be less than {{.ruleValue}}, the value informed was {{.value}}.",
 			"max": "The {{.fieldName}} cannot be greater than {{.ruleValue}}, the value informed was {{.value}}.",
 		},
-		// array
+		// array's in general
 		"array": map[string]string{
 			"min":      "The {{.fieldName}} cannot have length less than {{.ruleValue}}, the value informed was {{.value}}.",
 			"max":      "The {{.fieldName}} cannot have length greater than {{.ruleValue}}, the value informed was {{.value}}.",
@@ -57,21 +59,24 @@ func init() {
 	}
 }
 
-// GenerateErrorMessage -
+// GenerateErrorMessage - Generate an error using the messageInput.CustomMessages or the nativeMessages
 func GenerateErrorMessage(messageInput MessageInput) error {
-	//theres some message for the rule
-	if messageInput.CustomMessages["all"] != nil && messageInput.CustomMessages["all"][messageInput.RuleName] != "" {
-		messageInput.ValidatorKeyType = "all"
-		return templateErrorMessage(messageInput)
+	if messageInput.CustomMessages["*"] != nil && messageInput.CustomMessages["*"][messageInput.RuleName] != "" {
+		//there's some custom message for every field and that especific rule
+		messageInput.ValidatorKeyType = "*"
+		return TemplateErrorMessage(messageInput)
 	} else if messageInput.CustomMessages[messageInput.FieldName] != nil && messageInput.CustomMessages[messageInput.FieldName][messageInput.RuleName] != "" {
+		//there's some custom message for that especific field and rule
 		messageInput.ValidatorKeyType = messageInput.FieldName
-		return templateErrorMessage(messageInput)
+		return TemplateErrorMessage(messageInput)
 	}
+	//there's no custom message for that field and rule
 	messageInput.CustomMessages = nativeMessages
-	return templateErrorMessage(messageInput)
+	return TemplateErrorMessage(messageInput)
 }
 
-func templateErrorMessage(messageInput MessageInput) error {
+// TemplateErrorMessage - Returns an error with a templated string using attributes of messageInput parameter
+func TemplateErrorMessage(messageInput MessageInput) error {
 	var errorMessage bytes.Buffer
 	if err := template.Must(template.New("ErrorMessageTemplate").Parse(messageInput.CustomMessages[messageInput.ValidatorKeyType][messageInput.RuleName])).Execute(&errorMessage, map[string]interface{}{"fieldName": messageInput.FieldName, "value": messageInput.FieldValue, "ruleValue": messageInput.RuleValue, "ruleName": messageInput.RuleName}); err != nil {
 		panic(err)
