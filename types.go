@@ -112,54 +112,36 @@ func defineTypes() {
 	types["string"] = make(map[string](func(MessageInput) error))
 	types["string"]["max"] = func(messageInput MessageInput) error {
 		PanicOnEmptyRuleValue("max", messageInput.RuleValue)
-		if floatRuleValue, errRuleValue := getFloatFromString(messageInput.RuleValue); errRuleValue != nil {
-			panic(errRuleValue.Error())
-		} else if float64(len(messageInput.FieldValue.(string))) > floatRuleValue {
-			return GenerateErrorMessage(messageInput)
+		if uint64(len(messageInput.FieldValue.(string))) <= GetUintRuleValueOrPanic(messageInput.RuleName, messageInput.RuleValue) {
+			return nil
 		}
-		return nil
+		return GenerateErrorMessage(messageInput)
 	}
 	types["string"]["min"] = func(messageInput MessageInput) error {
 		PanicOnEmptyRuleValue("min", messageInput.RuleValue)
-		if floatRuleValue, errRuleValue := getFloatFromString(messageInput.RuleValue); errRuleValue != nil {
-			panic(errRuleValue.Error())
-		} else if float64(len(messageInput.FieldValue.(string))) < floatRuleValue {
-			return GenerateErrorMessage(messageInput)
+		if uint64(len(messageInput.FieldValue.(string))) >= GetUintRuleValueOrPanic(messageInput.RuleName, messageInput.RuleValue) {
+			return nil
 		}
-		return nil
+		return GenerateErrorMessage(messageInput)
 	}
 	types["string"]["length"] = func(messageInput MessageInput) error {
-		PanicOnEmptyRuleValue("length", messageInput.RuleValue)
-		if floatRuleValue, errRuleValue := getFloatFromString(messageInput.RuleValue); errRuleValue != nil {
-			panic(errRuleValue.Error())
-		} else if float64(len(messageInput.FieldValue.(string))) != floatRuleValue {
-			return GenerateErrorMessage(messageInput)
+		PanicOnEmptyRuleValue("max", messageInput.RuleValue)
+		if uint64(len(messageInput.FieldValue.(string))) == GetUintRuleValueOrPanic(messageInput.RuleName, messageInput.RuleValue) {
+			return nil
 		}
-		return nil
+		return GenerateErrorMessage(messageInput)
 	}
 	types["string"]["email"] = func(messageInput MessageInput) error {
-		if fieldValueString := messageInput.FieldValue.(string); fieldValueString == "" || regexp.MustCompile(EmailRegex).MatchString(fieldValueString) {
-			return nil
-		}
-		return GenerateErrorMessage(messageInput)
+		return MatchRegex(messageInput, EmailRegex)
 	}
 	types["string"]["url"] = func(messageInput MessageInput) error {
-		if fieldValueString := messageInput.FieldValue.(string); fieldValueString == "" || regexp.MustCompile(URLRegex).MatchString(fieldValueString) {
-			return nil
-		}
-		return GenerateErrorMessage(messageInput)
+		return MatchRegex(messageInput, URLRegex)
 	}
 	types["string"]["ipv4"] = func(messageInput MessageInput) error {
-		if fieldValueString := messageInput.FieldValue.(string); fieldValueString == "" || regexp.MustCompile(IPv4Regex).MatchString(fieldValueString) {
-			return nil
-		}
-		return GenerateErrorMessage(messageInput)
+		return MatchRegex(messageInput, IPv4Regex)
 	}
 	// types["string"]["ipv6"] = func(messageInput MessageInput) error {
-	// 	if regexp.MustCompile(IPv6Regex).MatchString(messageInput.FieldValue.(string)) {
-	// 		return nil
-	// 	}
-	// 	return generateErrorMessage(messageInput)
+	// return MatchRegex(messageInput, IPv6Regex)
 	// }
 	types["string"]["json"] = func(messageInput MessageInput) error {
 		var temp interface{}
@@ -169,47 +151,31 @@ func defineTypes() {
 		return GenerateErrorMessage(messageInput)
 	}
 	types["string"]["alpha"] = func(messageInput MessageInput) error {
-		if regexp.MustCompile(AlphabeticRegex).MatchString(messageInput.FieldValue.(string)) {
-			return nil
-		}
-		return GenerateErrorMessage(messageInput)
+		return MatchRegex(messageInput, AlphabeticRegex)
 	}
 	types["string"]["alpha_dash"] = func(messageInput MessageInput) error {
-		if regexp.MustCompile(AlphaNumericDashRegex).MatchString(messageInput.FieldValue.(string)) {
-			return nil
-		}
-		return GenerateErrorMessage(messageInput)
+		return MatchRegex(messageInput, AlphaNumericDashRegex)
 	}
 	types["string"]["alpha_num"] = func(messageInput MessageInput) error {
-		if regexp.MustCompile(AlphaNumericRegex).MatchString(messageInput.FieldValue.(string)) {
-			return nil
-		}
-		return GenerateErrorMessage(messageInput)
+		return MatchRegex(messageInput, AlphaNumericRegex)
 	}
 	types["string"]["alpha_space"] = func(messageInput MessageInput) error {
-		if regexp.MustCompile(AlphabeticSpacesRegex).MatchString(messageInput.FieldValue.(string)) {
-			return nil
-		}
-		return GenerateErrorMessage(messageInput)
+		return MatchRegex(messageInput, AlphabeticSpacesRegex)
 	}
 	types["string"]["alpha_dash_space"] = func(messageInput MessageInput) error {
-		if regexp.MustCompile(AlphaNumericDashSpacesRegex).MatchString(messageInput.FieldValue.(string)) {
-			return nil
-		}
-		return GenerateErrorMessage(messageInput)
+		return MatchRegex(messageInput, AlphaNumericDashSpacesRegex)
 	}
 	types["string"]["alpha_num_space"] = func(messageInput MessageInput) error {
-		if regexp.MustCompile(AlphaNumericSpacesRegex).MatchString(messageInput.FieldValue.(string)) {
-			return nil
-		}
-		return GenerateErrorMessage(messageInput)
+		return MatchRegex(messageInput, AlphaNumericSpacesRegex)
 	}
 	types["string"]["regex"] = func(messageInput MessageInput) error {
 		PanicOnEmptyRuleValue("regex", messageInput.RuleValue)
-		if regexp.MustCompile(messageInput.RuleValue).MatchString(messageInput.FieldValue.(string)) {
-			return nil
-		}
-		return GenerateErrorMessage(messageInput)
+		return MatchRegex(messageInput, messageInput.RuleValue)
+	}
+	types["string"]["required"] = func(messageInput MessageInput) error {
+		messageInput.RuleName = "min"
+		messageInput.RuleValue = "1"
+		return types["string"]["min"](messageInput)
 	}
 	//timestamps
 	types["timestamp"] = make(map[string](func(MessageInput) error))
@@ -309,29 +275,64 @@ func defineTypes() {
 	}
 	//arrays
 	types["array"] = make(map[string](func(MessageInput) error))
-	// types["array"]["max"] = func(messageInput MessageInput) error {
-	// 	PanicOnEmptyRuleValue("max", messageInput.RuleValue)
-	// 	//try uint
-	// 	uintFieldValue, errFieldValue := getFloatArrayFromInterface(message.FieldValue)
-	// 	uintRuleValue, errRuleValue := getUintFromString(messageInput.RuleValue)
-	// 	if errFieldValue != nil {
-	// 		//try float
-	// 		floatFieldValue, errFieldValue := getFloatFromString(fieldValueString)
-	// 		floatRuleValue, errRuleValue := getFloatFromString(messageInput.RuleValue)
-	// 		if errFieldValue != nil {
-	// 			return errFieldValue
-	// 		} else if errRuleValue != nil {
-	// 			panic(errRuleValue.Error())
-	// 		} else if floatFieldValue <= floatRuleValue {
-	// 			return nil
-	// 		}
-	// 	} else if errRuleValue != nil {
-	// 		panic(errRuleValue.Error())
-	// 	} else if uintFieldValue <= uintRuleValue {
-	// 		return nil
-	// 	}
-	// 	return GenerateErrorMessage(messageInput)
-	// }
+	types["array"]["max"] = func(messageInput MessageInput) error {
+		PanicOnEmptyRuleValue("max", messageInput.RuleValue)
+		uintRuleValue := GetUintRuleValueOrPanic(messageInput.RuleName, messageInput.RuleValue)
+		if interfaceArrayFieldValue, errFieldValue := getInterfaceArrayFromInterface(messageInput.FieldValue); errFieldValue != nil {
+			return errFieldValue
+		} else if uint64(len(interfaceArrayFieldValue)) <= uintRuleValue {
+			return nil
+		}
+		return GenerateErrorMessage(messageInput)
+	}
+	types["array"]["min"] = func(messageInput MessageInput) error {
+		PanicOnEmptyRuleValue("min", messageInput.RuleValue)
+		uintRuleValue := GetUintRuleValueOrPanic(messageInput.RuleName, messageInput.RuleValue)
+		if interfaceArrayFieldValue, errFieldValue := getInterfaceArrayFromInterface(messageInput.FieldValue); errFieldValue != nil {
+			return errFieldValue
+		} else if uint64(len(interfaceArrayFieldValue)) >= uintRuleValue {
+			return nil
+		}
+		return GenerateErrorMessage(messageInput)
+	}
+	types["array"]["min"] = func(messageInput MessageInput) error {
+		PanicOnEmptyRuleValue("min", messageInput.RuleValue)
+		uintRuleValue := GetUintRuleValueOrPanic(messageInput.RuleName, messageInput.RuleValue)
+		if interfaceArrayFieldValue, errFieldValue := getInterfaceArrayFromInterface(messageInput.FieldValue); errFieldValue != nil {
+			return errFieldValue
+		} else if uint64(len(interfaceArrayFieldValue)) >= uintRuleValue {
+			return nil
+		}
+		return GenerateErrorMessage(messageInput)
+	}
+	types["array"]["distinct"] = func(messageInput MessageInput) error {
+		interfaceArrayFieldValue, errFieldValue := getInterfaceArrayFromInterface(messageInput.FieldValue)
+		if errFieldValue != nil {
+			return errFieldValue
+		}
+		arrayLen := len(interfaceArrayFieldValue)
+		for i := 0; i < arrayLen-1; i++ {
+			for j := i + 1; j < arrayLen; j++ {
+				if interfaceArrayFieldValue[i] == interfaceArrayFieldValue[j] {
+					return GenerateErrorMessage(messageInput)
+				}
+			}
+		}
+		return nil
+	}
+	types["array"]["required"] = func(messageInput MessageInput) error {
+		messageInput.RuleName = "min"
+		messageInput.RuleValue = "1"
+		return types["array"]["min"](messageInput)
+	}
+}
+
+// MatchRegex -
+func MatchRegex(messageInput MessageInput, regex string) error {
+	if fieldValueString := messageInput.FieldValue.(string); fieldValueString == "" || regexp.MustCompile(regex).MatchString(fieldValueString) {
+		return nil
+	}
+	return GenerateErrorMessage(messageInput)
 }
 
 //PanicOnEmptyRuleValue - Check if the rule value is empty and panic if true
@@ -341,15 +342,33 @@ func PanicOnEmptyRuleValue(rule string, ruleValue string) {
 	}
 }
 
-func getFloatArrayFromInterface(inter interface{}) ([]float64, error) {
-	var float64Array []float64
-	//marsh to get json string
-	fieldValueJSONString, err := json.Marshal(inter)
-	if err != nil {
+//GetUintRuleValueOrPanic - Check if the rule value is empty and panic if true
+func GetUintRuleValueOrPanic(rule string, ruleValue string) uint64 {
+	if uintRuleValue, errRuleValue := getUintFromString(ruleValue); errRuleValue == nil {
+		return uintRuleValue
+	}
+	panic(fmt.Sprintf("The rule %s should to be a uint, pass a value, like %v:23", rule, rule))
+}
+
+func getInterfaceArrayFromInterface(inter interface{}) ([]interface{}, error) {
+	var interfaceArray []interface{}
+	if fieldValueJSONString, err := json.Marshal(inter); err != nil {
+		//marsh to get json string
+		return nil, err
+	} else if err = json.Unmarshal([]byte(fieldValueJSONString), &interfaceArray); err != nil {
+		//unmarsh to get []interface{}
 		return nil, err
 	}
-	//unmarsh to get []float64
-	if err = json.Unmarshal([]byte(fieldValueJSONString), &float64Array); err != nil {
+	return interfaceArray, nil
+}
+
+func getFloatArrayFromInterface(inter interface{}) ([]float64, error) {
+	var float64Array []float64
+	if fieldValueJSONString, err := json.Marshal(inter); err != nil {
+		//marsh to get json string
+		return nil, err
+	} else if err = json.Unmarshal([]byte(fieldValueJSONString), &float64Array); err != nil {
+		//unmarsh to get []float64
 		return nil, err
 	}
 	return float64Array, nil
@@ -357,13 +376,11 @@ func getFloatArrayFromInterface(inter interface{}) ([]float64, error) {
 
 func getStringArrayFromInterface(inter interface{}) ([]string, error) {
 	var stringArray []string
-	//marsh to get json string
-	fieldValueJSONString, err := json.Marshal(inter)
-	if err != nil {
+	if fieldValueJSONString, err := json.Marshal(inter); err != nil {
+		//marsh to get json string
 		return nil, err
-	}
-	//unmarsh to get []uint64
-	if err = json.Unmarshal([]byte(fieldValueJSONString), &stringArray); err != nil {
+	} else if err = json.Unmarshal([]byte(fieldValueJSONString), &stringArray); err != nil {
+		//unmarsh to get []uint64
 		return nil, err
 	}
 	return stringArray, nil
@@ -371,13 +388,11 @@ func getStringArrayFromInterface(inter interface{}) ([]string, error) {
 
 func getUintArrayFromInterface(inter interface{}) ([]uint64, error) {
 	var uint64Array []uint64
-	//marsh to get json string
-	fieldValueJSONString, err := json.Marshal(inter)
-	if err != nil {
+	if fieldValueJSONString, err := json.Marshal(inter); err != nil {
+		//marsh to get json string
 		return nil, err
-	}
-	//unmarsh to get []uint64
-	if err = json.Unmarshal([]byte(fieldValueJSONString), &uint64Array); err != nil {
+	} else if err = json.Unmarshal([]byte(fieldValueJSONString), &uint64Array); err != nil {
+		//unmarsh to get []uint64
 		return nil, err
 	}
 	return uint64Array, nil
@@ -401,8 +416,7 @@ func getTimestampFromRuleString(value string) time.Time {
 	parts := strings.Split(value, "+")
 	if parts[0] != "today" {
 		panic("Error: The rule value should to be today or today+1 or today+2 or ... ")
-	}
-	if len(parts) == 2 {
+	} else if len(parts) == 2 {
 		days, err := strconv.Atoi(parts[1])
 		if err == nil {
 			return time.Now().AddDate(0, 0, days)

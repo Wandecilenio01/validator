@@ -17,25 +17,31 @@ func init() {
 			"min": "The {{.fieldName}} cannot be less than {{.ruleValue}}, the value informed was {{.value}}.",
 			"max": "The {{.fieldName}} cannot be greater than {{.ruleValue}}, the value informed was {{.value}}.",
 		},
-		//string
+		// array
+		"array": map[string]string{
+			"min":      "The {{.fieldName}} cannot have length less than {{.ruleValue}}, the value informed was {{.value}}.",
+			"max":      "The {{.fieldName}} cannot have length greater than {{.ruleValue}}, the value informed was {{.value}}.",
+			"distinct": "The {{.fieldName}} cannot have to be {{.ruleName}} and cannot have repeated itens, the value informed was {{.value}}.",
+		},
+		// string
 		"string": map[string]string{
-			"min":   "The {{.fieldName}} cannot have length less than {{.ruleValue}}, the length of informed value was {{.value}}.",
-			"max":   "The {{.fieldName}} cannot have length greater than {{.ruleValue}}, the length of informed value was {{.value}}.",
-			"email": "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was {{.value}}.",
-			"url":   "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was {{.value}}.",
-			"ipv4":  "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was {{.value}}.",
+			"min":   "The {{.fieldName}} cannot have length less than {{.ruleValue}}, the length of informed value was \"{{.value}}\".",
+			"max":   "The {{.fieldName}} cannot have length greater than {{.ruleValue}}, the length of informed value was \"{{.value}}\".",
+			"email": "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was \"{{.value}}\".",
+			"url":   "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was \"{{.value}}\".",
+			"ipv4":  "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was \"{{.value}}\".",
 			// "ipv6":  "The {{.fieldName}} is not a valid {{.ruleValue}}, the informed value was {{.value}}.",
-			"json":             "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was {{.value}}.",
-			"alpha":            "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was {{.value}}.",
-			"alpha_dash":       "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was {{.value}}.",
-			"alpha_num":        "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was {{.value}}.",
-			"alpha_space":      "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was {{.value}}.",
-			"alpha_dash_space": "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was {{.value}}.",
-			"alpha_num_space":  "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was {{.value}}.",
-			"length":           "The {{.fieldName}} cannot have length different than {{.ruleValue}}, the length of informed value was {{.value}}.",
+			"json":             "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was \"{{.value}}\".",
+			"alpha":            "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was \"{{.value}}\".",
+			"alpha_dash":       "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was \"{{.value}}\".",
+			"alpha_num":        "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was \"{{.value}}\".",
+			"alpha_space":      "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was \"{{.value}}\".",
+			"alpha_dash_space": "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was \"{{.value}}\".",
+			"alpha_num_space":  "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was \"{{.value}}\".",
+			"length":           "The {{.fieldName}} cannot have length different than {{.ruleValue}}, the length of informed value was \"{{.value}}\".",
 			"regex":            "The {{.fieldName}} is not a valid {{.ruleName}}:{{.ruleValue}} , the informed value was {{.value}}.",
 		},
-		//timestamp
+		// timestamp
 		"timestamp": map[string]string{
 			"equal":                "The {{.fieldName}} have to be equals to {{.ruleValue}}, the timestamp informed was {{.value}}.",
 			"after":                "The {{.fieldName}} have to be after {{.ruleValue}}, the timestamp informed was {{.value}}.",
