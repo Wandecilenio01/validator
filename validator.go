@@ -11,30 +11,40 @@ const (
 	TagName = "struct-validator"
 )
 
-// relation between 'validator key type' and 'rules'
-var nativeValidators = map[string][]string{
-	"numeric": []string{"min", "max"},
-	"string":  []string{"min", "max"},
-}
+var (
+	// relation between 'validator key type' and 'rules'
+	nativeValidators map[string][]string
+	// relation between golang type names and 'validators key types'
+	nativeValidatorsKeyType map[string]string
+)
 
-// relation between golang type names and 'validators key types'
-var nativeValidatorsKeyType = map[string]string{
-	"int":       "numeric",
-	"int64":     "numeric",
-	"int32":     "numeric",
-	"int16":     "numeric",
-	"int8":      "numeric",
-	"uint":      "numeric",
-	"uint64":    "numeric",
-	"uint32":    "numeric",
-	"uint16":    "numeric",
-	"uint8":     "numeric",
-	"uintptr":   "numeric",
-	"float32":   "numeric",
-	"float64":   "numeric",
-	"string":    "string",
-	"time.Time": "timestamp",
-	"array":     "array",
+func init() {
+	nativeValidatorsKeyType = map[string]string{
+		"int":       "numeric",
+		"int64":     "numeric",
+		"int32":     "numeric",
+		"int16":     "numeric",
+		"int8":      "numeric",
+		"uint":      "numeric",
+		"uint64":    "numeric",
+		"uint32":    "numeric",
+		"uint16":    "numeric",
+		"uint8":     "numeric",
+		"uintptr":   "numeric",
+		"float32":   "numeric",
+		"float64":   "numeric",
+		"string":    "string",
+		"time.Time": "timestamp",
+		"array":     "array",
+	}
+	// fill nativeValidator using the 'type' relation
+	nativeValidators = make(map[string][]string, 0)
+	for validatorKeyType, ruleHandler := range types {
+		nativeValidators[validatorKeyType] = make([]string, 0)
+		for rule := range ruleHandler {
+			nativeValidators[validatorKeyType] = append(nativeValidators[validatorKeyType], rule)
+		}
+	}
 }
 
 // Validate - will validate all structs with the tag "struct-validator" that you pass by argument
