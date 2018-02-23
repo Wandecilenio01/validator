@@ -2,6 +2,7 @@ package validator
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -66,51 +67,43 @@ func defineTypes() {
 	types["numeric"] = make(map[string](func(MessageInput) error))
 	types["numeric"]["min"] = func(messageInput MessageInput) error {
 		PanicOnEmptyRuleValue("min", messageInput.RuleValue)
-		fieldValueString := fmt.Sprintf("%v", messageInput.FieldValue)
-		//try uint
-		uintFieldValue, errFieldValue := GetUintFromString(fieldValueString)
-		uintRuleValue, errRuleValue := GetUintFromString(messageInput.RuleValue)
-		if errFieldValue != nil {
-			//try float
-			floatFieldValue, errFieldValue := GetFloatFromString(fieldValueString)
-			floatRuleValue, errRuleValue := GetFloatFromString(messageInput.RuleValue)
-			if errFieldValue != nil {
-				return errFieldValue
-			} else if errRuleValue != nil {
-				panic(errRuleValue.Error())
-			} else if floatFieldValue >= floatRuleValue {
-				return nil
-			}
-		} else if errRuleValue != nil {
-			panic(errRuleValue.Error())
-		} else if uintFieldValue >= uintRuleValue {
-			return nil
+		//try with float64
+		if fieldValue, err := GetFloatFromInterface(messageInput.FieldValue); err != nil {
+			return err
+		} else if ruleValue, err := GetFloatFromString(messageInput.RuleValue); err != nil {
+			panic(err)
+		} else if fieldValue < ruleValue {
+			return GenerateErrorMessage(messageInput)
 		}
-		return GenerateErrorMessage(messageInput)
+		//try with uint64
+		if fieldValue, err := GetUintFromInterface(messageInput.FieldValue); err != nil {
+			return err
+		} else if ruleValue, err := GetUintFromString(messageInput.RuleValue); err != nil {
+			panic(err)
+		} else if fieldValue < ruleValue {
+			return GenerateErrorMessage(messageInput)
+		}
+		return nil
 	}
 	types["numeric"]["max"] = func(messageInput MessageInput) error {
 		PanicOnEmptyRuleValue("max", messageInput.RuleValue)
-		fieldValueString := fmt.Sprintf("%v", messageInput.FieldValue)
-		//try uint
-		uintFieldValue, errFieldValue := GetUintFromString(fieldValueString)
-		uintRuleValue, errRuleValue := GetUintFromString(messageInput.RuleValue)
-		if errFieldValue != nil {
-			//try float
-			floatFieldValue, errFieldValue := GetFloatFromString(fieldValueString)
-			floatRuleValue, errRuleValue := GetFloatFromString(messageInput.RuleValue)
-			if errFieldValue != nil {
-				return errFieldValue
-			} else if errRuleValue != nil {
-				panic(errRuleValue.Error())
-			} else if floatFieldValue <= floatRuleValue {
-				return nil
-			}
-		} else if errRuleValue != nil {
-			panic(errRuleValue.Error())
-		} else if uintFieldValue <= uintRuleValue {
-			return nil
+		//try with float64
+		if fieldValue, err := GetFloatFromInterface(messageInput.FieldValue); err != nil {
+			return err
+		} else if ruleValue, err := GetFloatFromString(messageInput.RuleValue); err != nil {
+			panic(err)
+		} else if fieldValue < ruleValue {
+			return GenerateErrorMessage(messageInput)
 		}
-		return GenerateErrorMessage(messageInput)
+		//try with uint64
+		if fieldValue, err := GetUintFromInterface(messageInput.FieldValue); err != nil {
+			return err
+		} else if ruleValue, err := GetUintFromString(messageInput.RuleValue); err != nil {
+			panic(err)
+		} else if fieldValue > ruleValue {
+			return GenerateErrorMessage(messageInput)
+		}
+		return nil
 	}
 	// string
 	types["string"] = make(map[string](func(MessageInput) error))
@@ -360,46 +353,22 @@ func GetInterfaceArrayFromInterface(inter interface{}) ([]interface{}, error) {
 	return interfaceArray, nil
 }
 
-// GetFloatArrayFromInterface - Try to get a float64 array from a interface, if possible, then a float64  array
+// GetFloatFromInterface - Try to get an float64 from a interface, if possible, then a float64
 // is returned, and if not an error is returned
-func GetFloatArrayFromInterface(inter interface{}) ([]float64, error) {
-	var float64Array []float64
-	if fieldValueJSONString, err := json.Marshal(inter); err != nil {
-		//marsh to get json string
-		return nil, err
-	} else if err = json.Unmarshal([]byte(fieldValueJSONString), &float64Array); err != nil {
-		//unmarsh to get []float64
-		return nil, err
+func GetFloatFromInterface(inter interface{}) (float64, error) {
+	if v, ok := inter.(float64); ok {
+		return v, nil
 	}
-	return float64Array, nil
+	return 0, errors.New("Error: THe informed interface is not a valid float64")
 }
 
-// GetStringArrayFromInterface - Try to get a string array from a interface, if possible, then a string array
+// GetUintFromInterface - Try to get an uint64 from a interface, if possible, then a uint64
 // is returned, and if not an error is returned
-func GetStringArrayFromInterface(inter interface{}) ([]string, error) {
-	var stringArray []string
-	if fieldValueJSONString, err := json.Marshal(inter); err != nil {
-		//marsh to get json string
-		return nil, err
-	} else if err = json.Unmarshal([]byte(fieldValueJSONString), &stringArray); err != nil {
-		//unmarsh to get []uint64
-		return nil, err
+func GetUintFromInterface(inter interface{}) (uint64, error) {
+	if v, ok := inter.(uint64); ok {
+		return v, nil
 	}
-	return stringArray, nil
-}
-
-// GetUintArrayFromInterface - Try to get an uint64 array from a interface, if possible, then a uint64 array
-// is returned, and if not an error is returned
-func GetUintArrayFromInterface(inter interface{}) ([]uint64, error) {
-	var uint64Array []uint64
-	if fieldValueJSONString, err := json.Marshal(inter); err != nil {
-		//marsh to get json string
-		return nil, err
-	} else if err = json.Unmarshal([]byte(fieldValueJSONString), &uint64Array); err != nil {
-		//unmarsh to get []uint64
-		return nil, err
-	}
-	return uint64Array, nil
+	return 0, errors.New("Error: THe informed interface is not a valid uint64")
 }
 
 // GetFloatFromString - Try to get an float from a interface, if possible, then a float
@@ -418,6 +387,15 @@ func GetUintFromString(value string) (uint64, error) {
 		return convertedValue, nil
 	}
 	return 0, fmt.Errorf("Error: %v is not a valid uint", value)
+}
+
+// GetFieldNameAndValueFromRuleString - Try to get a time.Time from a rule value string, if possible, then a time.Time
+// is returned, and if not a panic is returned
+func GetFieldNameAndValueFromRuleString(value string) (string, string) {
+	if parts := strings.Split(value, ","); len(parts) == 2 {
+		return parts[0], parts[1]
+	}
+	panic("Error: The rule value should to be \"fieldName,value\"")
 }
 
 // GetTimestampFromRuleString - Try to get a time.Time from a rule value string, if possible, then a time.Time

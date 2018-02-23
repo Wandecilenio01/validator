@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -48,28 +49,40 @@ func init() {
 }
 
 // Validate - will validate all structs with the tag "struct-validator" that you pass by argument
-func Validate(st interface{}, messages map[string]map[string]string) (errors []error) {
+func Validate(st interface{}, messages map[string]map[string]string) (returnedErrors []error) {
+	if st == nil {
+		return append(returnedErrors, errors.New("The interface passed is nil"))
+	}
 	stValue := reflect.ValueOf(st)
-	// for each field
+	// mount fields list
 	for i := 0; i < stValue.NumField(); i++ {
-		field := stValue.Type().Field(i)
-		errors = append(errors, checkValidations(strings.Replace(field.Tag.Get(TagName), " ", "", -1), MessageInput{
-			FieldName:      field.Name,
-			FieldValue:     stValue.Field(i).Interface(),
+		field := stValue.Field(i)
+		var interfaceValue interface{}
+		if fieldKind := field.Type().Kind(); (reflect.Int <= fieldKind && fieldKind <= reflect.Int64) || fieldKind == reflect.Float32 || fieldKind == reflect.Float64 {
+			//convert int type to float64
+			interfaceValue = float64(field.Int())
+		} else if reflect.Uint <= fieldKind && fieldKind <= reflect.Uintptr {
+			//convert uint type to uint64
+			interfaceValue = field.Uint()
+		} else {
+			//anothers types
+			interfaceValue = field.Interface()
+		}
+		//get errors
+		returnedErrors = append(returnedErrors, checkValidations(strings.Replace(stValue.Type().Field(i).Tag.Get(TagName), " ", "", -1), MessageInput{
+			FieldName:      field.Type().Name(),
+			FieldValue:     interfaceValue,
 			CustomMessages: messages,
-			FieldType:      field.Type,
+			FieldType:      field.Type(),
 		})...)
 	}
-	return errors
+	return returnedErrors
 }
 
 // getValidatorKeyType - check the field type and returns the 'validator key type' associated to field type
 func getValidatorKeyType(typeName string) string {
 	if parts := strings.Split(typeName, "[]"); len(parts) == 2 {
 		return nativeValidatorsKeyType["array"]
-	}
-	if nativeValidatorsKeyType[typeName] == "" {
-		return "custom"
 	}
 	return nativeValidatorsKeyType[typeName]
 }
