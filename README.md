@@ -86,6 +86,10 @@ Below there's a list of validator key type with sublists of rules.
     * **alpha_dash_space**: Rule *alpha_num_space* + '-' + '_';
     * **regex**: The field value have to match the specified regex, ```(regex:^[0-9]*$)```;
     * **required**: The field value cannot be empty.
+    * **required_with**: The field under validation must be present and not empty only if any of the other specified fields are not empty, ```(required_with:field1,field2)```;
+	* **required_with_all**: The field under validation must be present and not empty only if all of the other specified fields are not empty, ```(required_with_all:field1,field2)```;
+	* **required_without**: The field under validation must be present and not empty only when any of the other specified fields are empty, ```(required_without:field1,field2)```;
+    * **required_without_all**: The field under validation must be present and not empty only when all of the other specified fields are empty, ```(required_without_all:field1,field2)```.
 * **timestamp**: Represents the ```time.Time``` type.
     In this type the rule value used is ```today```, ```today+1``` represents tomorrow, ```today-1``` represents yesterday and so on, for example: ```today-2```, ```today+3```, ... .
     * **after**: The field value have to be after the specified time, ```(after:today)```;
@@ -103,6 +107,11 @@ Below there's a list of validator key type with sublists of rules.
     * **max**: Maximum length acceptable by array, ```(max:3)```.
     * **length**:  Exact length acceptable by array, ```(length:3)```.
     * **distinct**: The field array cannot have repeated values.
+    * **required**: The field value cannot be an empty array or nil.
+    * **required_with**: The field under validation must be present and not empty only if any of the other specified fields are not empty, ```(required_with:field1,field2)```;
+    * **required_with_all**: The field under validation must be present and not empty only if all of the other specified fields are not empty, ```(required_with_all:field1,field2)```;
+    * **required_without**: The field under validation must be present and not empty only when any of the other specified fields are empty, ```(required_without:field1,field2)```;
+    * **required_without_all**: The field under validation must be present and not empty only when all of the other specified fields are empty, ```(required_without_all:field1,field2)```.
 
 ## Custom Validations
 

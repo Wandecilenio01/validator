@@ -54,7 +54,8 @@ func Validate(st interface{}, messages map[string]map[string]string) (returnedEr
 		return append(returnedErrors, errors.New("The interface passed is nil"))
 	}
 	stValue := reflect.ValueOf(st)
-	// mount fields list
+	// mount message input list
+	messagesInput := make([]MessageInput, 0)
 	for i := 0; i < stValue.NumField(); i++ {
 		field := stValue.Field(i)
 		var interfaceValue interface{}
@@ -68,13 +69,24 @@ func Validate(st interface{}, messages map[string]map[string]string) (returnedEr
 			//anothers types
 			interfaceValue = field.Interface()
 		}
+		messagesInput = append(messagesInput, MessageInput{
+			FieldName:        stValue.Type().Field(i).Name,
+			FieldValue:       interfaceValue,
+			CustomMessages:   messages,
+			FieldType:        field.Type(),
+			ValidatorKeyType: getValidatorKeyType(field.Type().String()),
+		})
+	}
+	//get errors
+	for i := 0; i < stValue.NumField(); i++ {
+		messagesInput[i].OthersMessageInput = messagesInput
+		tags := strings.Replace(stValue.Type().Field(i).Tag.Get(TagName), " ", "", -1)
+		// get validator key
+		if messagesInput[i].ValidatorKeyType == "" || len(tags) == 0 {
+			continue
+		}
 		//get errors
-		returnedErrors = append(returnedErrors, checkValidations(strings.Replace(stValue.Type().Field(i).Tag.Get(TagName), " ", "", -1), MessageInput{
-			FieldName:      field.Type().Name(),
-			FieldValue:     interfaceValue,
-			CustomMessages: messages,
-			FieldType:      field.Type(),
-		})...)
+		returnedErrors = append(returnedErrors, checkValidations(tags, messagesInput[i])...)
 	}
 	return returnedErrors
 }
@@ -90,10 +102,6 @@ func getValidatorKeyType(typeName string) string {
 // Will get the 'validator key type', get rules of field tag and get errors if they exist.
 // A panic is throwed if the rule of 'messageInput' does not exists for the field 'validator key type'
 func checkValidations(tags string, messageInput MessageInput) (errors []error) {
-	// get validator key
-	if messageInput.ValidatorKeyType = getValidatorKeyType(messageInput.FieldType.String()); messageInput.ValidatorKeyType == "" || len(tags) == 0 {
-		return errors
-	}
 	// get rules from field
 	rules := strings.Split(tags, "|")
 	for _, rule := range rules {

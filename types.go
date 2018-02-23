@@ -44,13 +44,14 @@ const (
 
 // MessageInput - Input struct used
 type MessageInput struct {
-	FieldName        string
-	FieldType        reflect.Type
-	ValidatorKeyType string
-	FieldValue       interface{}
-	RuleName         string
-	RuleValue        string
-	CustomMessages   map[string]map[string]string
+	FieldName          string
+	FieldType          reflect.Type
+	ValidatorKeyType   string
+	FieldValue         interface{}
+	RuleName           string
+	RuleValue          string
+	CustomMessages     map[string]map[string]string
+	OthersMessageInput []MessageInput
 }
 
 // relation between 'validator key type' and 'rule' and 'handler'
@@ -69,16 +70,15 @@ func defineTypes() {
 		PanicOnEmptyRuleValue("min", messageInput.RuleValue)
 		//try with float64
 		if fieldValue, err := GetFloatFromInterface(messageInput.FieldValue); err != nil {
-			return err
+			//try with uint64
+			if fieldValue, err := GetUintFromInterface(messageInput.FieldValue); err != nil {
+				return err
+			} else if ruleValue, err := GetUintFromString(messageInput.RuleValue); err != nil {
+				panic(err)
+			} else if fieldValue < ruleValue {
+				return GenerateErrorMessage(messageInput)
+			}
 		} else if ruleValue, err := GetFloatFromString(messageInput.RuleValue); err != nil {
-			panic(err)
-		} else if fieldValue < ruleValue {
-			return GenerateErrorMessage(messageInput)
-		}
-		//try with uint64
-		if fieldValue, err := GetUintFromInterface(messageInput.FieldValue); err != nil {
-			return err
-		} else if ruleValue, err := GetUintFromString(messageInput.RuleValue); err != nil {
 			panic(err)
 		} else if fieldValue < ruleValue {
 			return GenerateErrorMessage(messageInput)
@@ -89,18 +89,17 @@ func defineTypes() {
 		PanicOnEmptyRuleValue("max", messageInput.RuleValue)
 		//try with float64
 		if fieldValue, err := GetFloatFromInterface(messageInput.FieldValue); err != nil {
-			return err
+			//try with uint64
+			if fieldValue, err := GetUintFromInterface(messageInput.FieldValue); err != nil {
+				return err
+			} else if ruleValue, err := GetUintFromString(messageInput.RuleValue); err != nil {
+				panic(err)
+			} else if fieldValue > ruleValue {
+				return GenerateErrorMessage(messageInput)
+			}
 		} else if ruleValue, err := GetFloatFromString(messageInput.RuleValue); err != nil {
 			panic(err)
 		} else if fieldValue < ruleValue {
-			return GenerateErrorMessage(messageInput)
-		}
-		//try with uint64
-		if fieldValue, err := GetUintFromInterface(messageInput.FieldValue); err != nil {
-			return err
-		} else if ruleValue, err := GetUintFromString(messageInput.RuleValue); err != nil {
-			panic(err)
-		} else if fieldValue > ruleValue {
 			return GenerateErrorMessage(messageInput)
 		}
 		return nil
@@ -312,6 +311,105 @@ func defineTypes() {
 		messageInput.RuleValue = "1"
 		return types["array"]["min"](messageInput)
 	}
+	//required's
+	types["string"]["required_with"] = func(messageInput MessageInput) error {
+		return RequiredWith(messageInput)
+	}
+	types["string"]["required_with_all"] = func(messageInput MessageInput) error {
+		return RequiredWithAll(messageInput)
+	}
+	types["string"]["required_without"] = func(messageInput MessageInput) error {
+		return RequiredWithout(messageInput)
+	}
+	types["string"]["required_without_all"] = func(messageInput MessageInput) error {
+		return RequiredWithoutAll(messageInput)
+	}
+	types["array"]["required_with"] = func(messageInput MessageInput) error {
+		return RequiredWith(messageInput)
+	}
+	types["array"]["required_with_all"] = func(messageInput MessageInput) error {
+		return RequiredWithAll(messageInput)
+	}
+	types["array"]["required_without"] = func(messageInput MessageInput) error {
+		return RequiredWithout(messageInput)
+	}
+	types["array"]["required_without_all"] = func(messageInput MessageInput) error {
+		return RequiredWithoutAll(messageInput)
+	}
+}
+
+func RequiredWithAll(messageInput MessageInput) error {
+	PanicOnEmptyRuleValue("required_with_all", messageInput.RuleValue)
+	fieldsNames := GetFieldsNamesFromRuleString(messageInput.RuleValue)
+	total := true
+	for i := 0; i < len(fieldsNames); i++ {
+		//get fieldName messageInput
+		for _, otherMessageInput := range messageInput.OthersMessageInput {
+			//get handler
+			if otherMessageInput.FieldName == fieldsNames[i] && types[otherMessageInput.ValidatorKeyType] != nil && types[otherMessageInput.ValidatorKeyType]["required"] != nil && types[otherMessageInput.ValidatorKeyType]["required"](otherMessageInput) != nil {
+				total = false
+				break
+			}
+		}
+	}
+	if total && types[messageInput.ValidatorKeyType]["required"](messageInput) != nil {
+		return GenerateErrorMessage(messageInput)
+	}
+	return nil
+}
+
+func RequiredWith(messageInput MessageInput) error {
+	PanicOnEmptyRuleValue("required_with", messageInput.RuleValue)
+	fieldsNames := GetFieldsNamesFromRuleString(messageInput.RuleValue)
+	for _, fieldName := range fieldsNames {
+		//get fieldName messageInput
+		for _, otherMessageInput := range messageInput.OthersMessageInput {
+			//get handler
+			if otherMessageInput.FieldName == fieldName && types[otherMessageInput.ValidatorKeyType] != nil && types[otherMessageInput.ValidatorKeyType]["required"] != nil && types[otherMessageInput.ValidatorKeyType]["required"](otherMessageInput) == nil {
+				if types[messageInput.ValidatorKeyType]["required"](messageInput) != nil {
+					return GenerateErrorMessage(messageInput)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func RequiredWithout(messageInput MessageInput) error {
+	PanicOnEmptyRuleValue("required_without", messageInput.RuleValue)
+	fieldsNames := GetFieldsNamesFromRuleString(messageInput.RuleValue)
+	for _, fieldName := range fieldsNames {
+		//get fieldName messageInput
+		for _, otherMessageInput := range messageInput.OthersMessageInput {
+			//get handler
+			if otherMessageInput.FieldName == fieldName && types[otherMessageInput.ValidatorKeyType] != nil && types[otherMessageInput.ValidatorKeyType]["required"] != nil && types[otherMessageInput.ValidatorKeyType]["required"](otherMessageInput) != nil {
+				if types[messageInput.ValidatorKeyType]["required"](messageInput) != nil {
+					return GenerateErrorMessage(messageInput)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func RequiredWithoutAll(messageInput MessageInput) error {
+	PanicOnEmptyRuleValue("required_without", messageInput.RuleValue)
+	fieldsNames := GetFieldsNamesFromRuleString(messageInput.RuleValue)
+	total := true
+	for i := 0; i < len(fieldsNames); i++ {
+		//get fieldName messageInput
+		for _, otherMessageInput := range messageInput.OthersMessageInput {
+			//get handler
+			if otherMessageInput.FieldName == fieldsNames[i] && types[otherMessageInput.ValidatorKeyType] != nil && types[otherMessageInput.ValidatorKeyType]["required"] != nil && types[otherMessageInput.ValidatorKeyType]["required"](otherMessageInput) == nil {
+				total = false
+				break
+			}
+		}
+	}
+	if total && types[messageInput.ValidatorKeyType]["required"](messageInput) != nil {
+		return GenerateErrorMessage(messageInput)
+	}
+	return nil
 }
 
 // MatchRegex - Check if a string regex match the messageInput.FieldValue, if not match then an error is
@@ -389,13 +487,10 @@ func GetUintFromString(value string) (uint64, error) {
 	return 0, fmt.Errorf("Error: %v is not a valid uint", value)
 }
 
-// GetFieldNameAndValueFromRuleString - Try to get a time.Time from a rule value string, if possible, then a time.Time
+// GetFieldsNamesFromRuleString - Try to get a time.Time from a rule value string, if possible, then a time.Time
 // is returned, and if not a panic is returned
-func GetFieldNameAndValueFromRuleString(value string) (string, string) {
-	if parts := strings.Split(value, ","); len(parts) == 2 {
-		return parts[0], parts[1]
-	}
-	panic("Error: The rule value should to be \"fieldName,value\"")
+func GetFieldsNamesFromRuleString(value string) []string {
+	return strings.Split(value, ",")
 }
 
 // GetTimestampFromRuleString - Try to get a time.Time from a rule value string, if possible, then a time.Time
