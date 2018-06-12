@@ -91,6 +91,65 @@ func Validate(st interface{}, messages map[string]map[string]string) (returnedEr
 	return returnedErrors
 }
 
+// ValidateFields - will validate all structs with the tag "struct-validator" that you pass by argument
+func ValidateFields(st interface{}, fields []string, messages map[string]map[string]string) (returnedErrors []error) {
+	if st == nil {
+		return append(returnedErrors, errors.New("The interface passed is nil"))
+	}
+
+	if len(fields) == 0 {
+		return append(returnedErrors, errors.New("The field \"fields\" cannot be empty"))
+	}
+
+	// Let's convert the array of fields to validate, to map of string and bool
+	namesMap := make(map[string]bool)
+	for _, field := range fields {
+		namesMap[field] = true
+	}
+
+	stValue := reflect.ValueOf(st)
+	// mount message input list
+	messagesInput := make([]MessageInput, 0)
+	for i := 0; i < stValue.NumField(); i++ {
+		field := stValue.Field(i)
+		var interfaceValue interface{}
+		if fieldKind := field.Type().Kind(); (reflect.Int <= fieldKind && fieldKind <= reflect.Int64) || fieldKind == reflect.Float32 || fieldKind == reflect.Float64 {
+			//convert int type to float64
+			interfaceValue = float64(field.Int())
+		} else if reflect.Uint <= fieldKind && fieldKind <= reflect.Uintptr {
+			//convert uint type to uint64
+			interfaceValue = field.Uint()
+		} else {
+			//anothers types
+			interfaceValue = field.Interface()
+		}
+		messagesInput = append(messagesInput, MessageInput{
+			FieldName:        stValue.Type().Field(i).Name,
+			FieldValue:       interfaceValue,
+			CustomMessages:   messages,
+			FieldType:        field.Type(),
+			ValidatorKeyType: getValidatorKeyType(field.Type().String()),
+		})
+	}
+
+	//get errors
+	if len(messagesInput) > 0 {
+		for i := 0; i < stValue.NumField(); i++ {
+			messagesInput[i].OthersMessageInput = messagesInput
+			tags := strings.Replace(stValue.Type().Field(i).Tag.Get(TagName), " ", "", -1)
+			// get validator key
+			_, exist := namesMap[stValue.Type().Field(i).Name]
+			if messagesInput[i].ValidatorKeyType == "" || len(tags) == 0 || !exist {
+				continue
+			}
+			//get errors
+			returnedErrors = append(returnedErrors, checkValidations(tags, messagesInput[i])...)
+		}
+	}
+
+	return returnedErrors
+}
+
 // getValidatorKeyType - check the field type and returns the 'validator key type' associated to field type
 func getValidatorKeyType(typeName string) string {
 	if parts := strings.Split(typeName, "[]"); len(parts) == 2 {
