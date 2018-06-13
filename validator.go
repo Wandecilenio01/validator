@@ -104,7 +104,7 @@ func ValidateFields(st interface{}, fields []string, messages map[string]map[str
 	// Let's convert the array of fields to validate, to map of string and bool
 	namesMap := make(map[string]bool)
 	for _, field := range fields {
-		namesMap[field] = true
+		namesMap[strings.ToLower(field)] = true
 	}
 
 	stValue := reflect.ValueOf(st)
@@ -137,10 +137,27 @@ func ValidateFields(st interface{}, fields []string, messages map[string]map[str
 		for i := 0; i < stValue.NumField(); i++ {
 			messagesInput[i].OthersMessageInput = messagesInput
 			tags := strings.Replace(stValue.Type().Field(i).Tag.Get(TagName), " ", "", -1)
-			// get validator key
-			_, exist := namesMap[stValue.Type().Field(i).Name]
-			if messagesInput[i].ValidatorKeyType == "" || len(tags) == 0 || !exist {
-				continue
+			valueTagJSON, validTagJSON := stValue.Type().Field(i).Tag.Lookup("json")
+			if validTagJSON {
+				// get validator key
+				_, exist := namesMap[valueTagJSON]
+				if exist {
+					if messagesInput[i].ValidatorKeyType == "" || len(tags) == 0 || !exist {
+						continue
+					}
+				} else {
+					// get validator key
+					_, exist := namesMap[strings.ToLower(stValue.Type().Field(i).Name)]
+					if messagesInput[i].ValidatorKeyType == "" || len(tags) == 0 || !exist {
+						continue
+					}
+				}
+			} else {
+				// get validator key
+				_, exist := namesMap[strings.ToLower(stValue.Type().Field(i).Name)]
+				if messagesInput[i].ValidatorKeyType == "" || len(tags) == 0 || !exist {
+					continue
+				}
 			}
 			//get errors
 			returnedErrors = append(returnedErrors, checkValidations(tags, messagesInput[i])...)
