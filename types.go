@@ -65,279 +65,290 @@ func init() {
 // Define native types
 func defineTypes() {
 	// numeric
-	types["numeric"] = make(map[string](func(MessageInput) error))
-	types["numeric"]["min"] = func(messageInput MessageInput) error {
-		PanicOnEmptyRuleValue("min", messageInput.RuleValue)
-		//try with float64
-		if fieldValue, err := GetFloatFromInterface(messageInput.FieldValue); err != nil {
-			//try with uint64
-			if fieldValue, err := GetUintFromInterface(messageInput.FieldValue); err != nil {
-				return err
-			} else if ruleValue, err := GetUintFromString(messageInput.RuleValue); err != nil {
+	{
+		types["numeric"] = make(map[string](func(MessageInput) error))
+		types["numeric"]["min"] = func(messageInput MessageInput) error {
+			PanicOnEmptyRuleValue("min", messageInput.RuleValue)
+			//try with float64
+			if fieldValue, err := GetFloatFromInterface(messageInput.FieldValue); err != nil {
+				//try with uint64
+				if fieldValue, err := GetUintFromInterface(messageInput.FieldValue); err != nil {
+					return err
+				} else if ruleValue, err := GetUintFromString(messageInput.RuleValue); err != nil {
+					panic(err)
+				} else if fieldValue < ruleValue {
+					return GenerateErrorMessage(messageInput)
+				}
+			} else if ruleValue, err := GetFloatFromString(messageInput.RuleValue); err != nil {
 				panic(err)
 			} else if fieldValue < ruleValue {
 				return GenerateErrorMessage(messageInput)
 			}
-		} else if ruleValue, err := GetFloatFromString(messageInput.RuleValue); err != nil {
-			panic(err)
-		} else if fieldValue < ruleValue {
-			return GenerateErrorMessage(messageInput)
+			return nil
 		}
-		return nil
-	}
-	types["numeric"]["max"] = func(messageInput MessageInput) error {
-		PanicOnEmptyRuleValue("max", messageInput.RuleValue)
-		//try with float64
-		if fieldValue, err := GetFloatFromInterface(messageInput.FieldValue); err != nil {
-			//try with uint64
-			if fieldValue, err := GetUintFromInterface(messageInput.FieldValue); err != nil {
-				return err
-			} else if ruleValue, err := GetUintFromString(messageInput.RuleValue); err != nil {
+		types["numeric"]["max"] = func(messageInput MessageInput) error {
+			PanicOnEmptyRuleValue("max", messageInput.RuleValue)
+			//try with float64
+			if fieldValue, err := GetFloatFromInterface(messageInput.FieldValue); err != nil {
+				//try with uint64
+				if fieldValue, err := GetUintFromInterface(messageInput.FieldValue); err != nil {
+					return err
+				} else if ruleValue, err := GetUintFromString(messageInput.RuleValue); err != nil {
+					panic(err)
+				} else if fieldValue > ruleValue {
+					return GenerateErrorMessage(messageInput)
+				}
+			} else if ruleValue, err := GetFloatFromString(messageInput.RuleValue); err != nil {
 				panic(err)
 			} else if fieldValue > ruleValue {
 				return GenerateErrorMessage(messageInput)
 			}
-		} else if ruleValue, err := GetFloatFromString(messageInput.RuleValue); err != nil {
-			panic(err)
-		} else if fieldValue < ruleValue {
-			return GenerateErrorMessage(messageInput)
+			return nil
 		}
-		return nil
 	}
 	// string
-	types["string"] = make(map[string](func(MessageInput) error))
-	types["string"]["max"] = func(messageInput MessageInput) error {
-		PanicOnEmptyRuleValue("max", messageInput.RuleValue)
-		if uint64(len(messageInput.FieldValue.(string))) <= GetUintRuleValueOrPanic(messageInput.RuleName, messageInput.RuleValue) {
-			return nil
+	{
+		types["string"] = make(map[string](func(MessageInput) error))
+		types["string"]["max"] = func(messageInput MessageInput) error {
+			PanicOnEmptyRuleValue("max", messageInput.RuleValue)
+			if uint64(len(messageInput.FieldValue.(string))) <= GetUintRuleValueOrPanic(messageInput.RuleName, messageInput.RuleValue) {
+				return nil
+			}
+			return GenerateErrorMessage(messageInput)
 		}
-		return GenerateErrorMessage(messageInput)
-	}
-	types["string"]["min"] = func(messageInput MessageInput) error {
-		PanicOnEmptyRuleValue("min", messageInput.RuleValue)
-		if uint64(len(messageInput.FieldValue.(string))) >= GetUintRuleValueOrPanic(messageInput.RuleName, messageInput.RuleValue) {
-			return nil
+		types["string"]["min"] = func(messageInput MessageInput) error {
+			PanicOnEmptyRuleValue("min", messageInput.RuleValue)
+			if uint64(len(messageInput.FieldValue.(string))) >= GetUintRuleValueOrPanic(messageInput.RuleName, messageInput.RuleValue) {
+				return nil
+			}
+			return GenerateErrorMessage(messageInput)
 		}
-		return GenerateErrorMessage(messageInput)
-	}
-	types["string"]["length"] = func(messageInput MessageInput) error {
-		PanicOnEmptyRuleValue("max", messageInput.RuleValue)
-		if uint64(len(messageInput.FieldValue.(string))) == GetUintRuleValueOrPanic(messageInput.RuleName, messageInput.RuleValue) {
-			return nil
+		types["string"]["length"] = func(messageInput MessageInput) error {
+			PanicOnEmptyRuleValue("max", messageInput.RuleValue)
+			if uint64(len(messageInput.FieldValue.(string))) == GetUintRuleValueOrPanic(messageInput.RuleName, messageInput.RuleValue) {
+				return nil
+			}
+			return GenerateErrorMessage(messageInput)
 		}
-		return GenerateErrorMessage(messageInput)
-	}
-	types["string"]["email"] = func(messageInput MessageInput) error {
-		return MatchRegex(messageInput, EmailRegex)
-	}
-	types["string"]["url"] = func(messageInput MessageInput) error {
-		return MatchRegex(messageInput, URLRegex)
-	}
-	types["string"]["ipv4"] = func(messageInput MessageInput) error {
-		return MatchRegex(messageInput, IPv4Regex)
-	}
-	// types["string"]["ipv6"] = func(messageInput MessageInput) error {
-	// return MatchRegex(messageInput, IPv6Regex)
-	// }
-	types["string"]["json"] = func(messageInput MessageInput) error {
-		var temp interface{}
-		if fieldValueString := messageInput.FieldValue.(string); fieldValueString == "" || json.Unmarshal([]byte(messageInput.FieldValue.(string)), &temp) == nil {
-			return nil
+		types["string"]["email"] = func(messageInput MessageInput) error {
+			return MatchRegex(messageInput, EmailRegex)
 		}
-		return GenerateErrorMessage(messageInput)
-	}
-	types["string"]["alpha"] = func(messageInput MessageInput) error {
-		return MatchRegex(messageInput, AlphabeticRegex)
-	}
-	types["string"]["alpha_dash"] = func(messageInput MessageInput) error {
-		return MatchRegex(messageInput, AlphaNumericDashRegex)
-	}
-	types["string"]["alpha_num"] = func(messageInput MessageInput) error {
-		return MatchRegex(messageInput, AlphaNumericRegex)
-	}
-	types["string"]["alpha_space"] = func(messageInput MessageInput) error {
-		return MatchRegex(messageInput, AlphabeticSpacesRegex)
-	}
-	types["string"]["alpha_dash_space"] = func(messageInput MessageInput) error {
-		return MatchRegex(messageInput, AlphaNumericDashSpacesRegex)
-	}
-	types["string"]["alpha_num_space"] = func(messageInput MessageInput) error {
-		return MatchRegex(messageInput, AlphaNumericSpacesRegex)
-	}
-	types["string"]["regex"] = func(messageInput MessageInput) error {
-		PanicOnEmptyRuleValue("regex", messageInput.RuleValue)
-		return MatchRegex(messageInput, messageInput.RuleValue)
-	}
-	types["string"]["required"] = func(messageInput MessageInput) error {
-		messageInput.RuleName = "min"
-		messageInput.RuleValue = "1"
-		return types["string"]["min"](messageInput)
+		types["string"]["url"] = func(messageInput MessageInput) error {
+			return MatchRegex(messageInput, URLRegex)
+		}
+		types["string"]["ipv4"] = func(messageInput MessageInput) error {
+			return MatchRegex(messageInput, IPv4Regex)
+		}
+		// types["string"]["ipv6"] = func(messageInput MessageInput) error {
+		// return MatchRegex(messageInput, IPv6Regex)
+		// }
+		types["string"]["json"] = func(messageInput MessageInput) error {
+			var temp interface{}
+			if fieldValueString := messageInput.FieldValue.(string); fieldValueString == "" || json.Unmarshal([]byte(messageInput.FieldValue.(string)), &temp) == nil {
+				return nil
+			}
+			return GenerateErrorMessage(messageInput)
+		}
+		types["string"]["alpha"] = func(messageInput MessageInput) error {
+			return MatchRegex(messageInput, AlphabeticRegex)
+		}
+		types["string"]["alpha_dash"] = func(messageInput MessageInput) error {
+			return MatchRegex(messageInput, AlphaNumericDashRegex)
+		}
+		types["string"]["alpha_num"] = func(messageInput MessageInput) error {
+			return MatchRegex(messageInput, AlphaNumericRegex)
+		}
+		types["string"]["alpha_space"] = func(messageInput MessageInput) error {
+			return MatchRegex(messageInput, AlphabeticSpacesRegex)
+		}
+		types["string"]["alpha_dash_space"] = func(messageInput MessageInput) error {
+			return MatchRegex(messageInput, AlphaNumericDashSpacesRegex)
+		}
+		types["string"]["alpha_num_space"] = func(messageInput MessageInput) error {
+			return MatchRegex(messageInput, AlphaNumericSpacesRegex)
+		}
+		types["string"]["regex"] = func(messageInput MessageInput) error {
+			PanicOnEmptyRuleValue("regex", messageInput.RuleValue)
+			return MatchRegex(messageInput, messageInput.RuleValue)
+		}
+		types["string"]["required"] = func(messageInput MessageInput) error {
+			messageInput.RuleName = "min"
+			messageInput.RuleValue = "1"
+			return types["string"]["min"](messageInput)
+		}
 	}
 	//timestamps
-	types["timestamp"] = make(map[string](func(MessageInput) error))
-	types["timestamp"]["after"] = func(messageInput MessageInput) error {
-		PanicOnEmptyRuleValue("after", messageInput.RuleValue)
-		ruleValueTime := GetTimestampFromRuleString(messageInput.RuleValue)
-		fieldValueTime := messageInput.FieldValue.(time.Time)
-		if fieldValueTime.After(GetTimestampFromRuleString(messageInput.RuleValue)) {
+	{
+		types["timestamp"] = make(map[string](func(MessageInput) error))
+		types["timestamp"]["after"] = func(messageInput MessageInput) error {
+			PanicOnEmptyRuleValue("after", messageInput.RuleValue)
+			ruleValueTime := GetTimestampFromRuleString(messageInput.RuleValue)
+			fieldValueTime := messageInput.FieldValue.(time.Time)
+			if fieldValueTime.After(GetTimestampFromRuleString(messageInput.RuleValue)) {
+				return nil
+			}
+			messageInput.RuleValue = ruleValueTime.Format(TimestampDefaultFormat)
+			messageInput.FieldValue = fieldValueTime.Format(TimestampDefaultFormat)
+			return GenerateErrorMessage(messageInput)
+		}
+		types["timestamp"]["after_date"] = func(messageInput MessageInput) error {
+			PanicOnEmptyRuleValue("after_date", messageInput.RuleValue)
+			fieldValueTime := TruncateTime(messageInput.FieldValue.(time.Time))
+			ruleValueTime := GetTimestampFromRuleString(messageInput.RuleValue)
+			if fieldValueTime.After(ruleValueTime) {
+				return nil
+			}
+			messageInput.RuleValue = ruleValueTime.Format(TimestampDateDefaultFormat)
+			messageInput.FieldValue = fieldValueTime.Format(TimestampDateDefaultFormat)
+			return GenerateErrorMessage(messageInput)
+		}
+		types["timestamp"]["before"] = func(messageInput MessageInput) error {
+			PanicOnEmptyRuleValue("before", messageInput.RuleValue)
+			ruleValueTime := GetTimestampFromRuleString(messageInput.RuleValue)
+			fieldValueTime := messageInput.FieldValue.(time.Time)
+			if fieldValueTime.Before(ruleValueTime) {
+				return nil
+			}
+			messageInput.RuleValue = ruleValueTime.Format(TimestampDefaultFormat)
+			messageInput.FieldValue = fieldValueTime.Format(TimestampDefaultFormat)
+			return GenerateErrorMessage(messageInput)
+		}
+		types["timestamp"]["before_date"] = func(messageInput MessageInput) error {
+			PanicOnEmptyRuleValue("before_date", messageInput.RuleValue)
+			ruleValueTime := TruncateTime(GetTimestampFromRuleString(messageInput.RuleValue))
+			fieldValueTime := messageInput.FieldValue.(time.Time)
+			if fieldValueTime.Before(ruleValueTime) {
+				return nil
+			}
+			messageInput.RuleValue = ruleValueTime.Format(TimestampDateDefaultFormat)
+			messageInput.FieldValue = fieldValueTime.Format(TimestampDateDefaultFormat)
+			return GenerateErrorMessage(messageInput)
+		}
+		types["timestamp"]["equal_date"] = func(messageInput MessageInput) error {
+			PanicOnEmptyRuleValue("equal_date", messageInput.RuleValue)
+			ruleValueTime := TruncateTime(GetTimestampFromRuleString(messageInput.RuleValue))
+			fieldValueTime := TruncateTime(messageInput.FieldValue.(time.Time))
+			if fieldValueTime.Equal(ruleValueTime) {
+				return nil
+			}
+			messageInput.RuleValue = ruleValueTime.Format(TimestampDateDefaultFormat)
+			messageInput.FieldValue = fieldValueTime.Format(TimestampDateDefaultFormat)
+			return GenerateErrorMessage(messageInput)
+		}
+		types["timestamp"]["equal"] = func(messageInput MessageInput) error {
+			PanicOnEmptyRuleValue("equal", messageInput.RuleValue)
+			ruleValueTime := GetTimestampFromRuleString(messageInput.RuleValue)
+			fieldValueTime := messageInput.FieldValue.(time.Time)
+			if fieldValueTime.Equal(ruleValueTime) {
+				return nil
+			}
+			messageInput.RuleValue = ruleValueTime.Format(TimestampDefaultFormat)
+			messageInput.FieldValue = fieldValueTime.Format(TimestampDefaultFormat)
+			return GenerateErrorMessage(messageInput)
+		}
+		types["timestamp"]["after_or_equal"] = func(messageInput MessageInput) error {
+			err := types["timestamp"]["after"](messageInput)
+			if err != nil {
+				return types["timestamp"]["equal"](messageInput)
+			}
 			return nil
 		}
-		messageInput.RuleValue = ruleValueTime.Format(TimestampDefaultFormat)
-		messageInput.FieldValue = fieldValueTime.Format(TimestampDefaultFormat)
-		return GenerateErrorMessage(messageInput)
-	}
-	types["timestamp"]["after_date"] = func(messageInput MessageInput) error {
-		PanicOnEmptyRuleValue("after_date", messageInput.RuleValue)
-		fieldValueTime := TruncateTime(messageInput.FieldValue.(time.Time))
-		ruleValueTime := GetTimestampFromRuleString(messageInput.RuleValue)
-		if fieldValueTime.After(ruleValueTime) {
+		types["timestamp"]["before_or_equal"] = func(messageInput MessageInput) error {
+			err := types["timestamp"]["before"](messageInput)
+			if err != nil {
+				return types["timestamp"]["equal"](messageInput)
+			}
 			return nil
 		}
-		messageInput.RuleValue = ruleValueTime.Format(TimestampDateDefaultFormat)
-		messageInput.FieldValue = fieldValueTime.Format(TimestampDateDefaultFormat)
-		return GenerateErrorMessage(messageInput)
-	}
-	types["timestamp"]["before"] = func(messageInput MessageInput) error {
-		PanicOnEmptyRuleValue("before", messageInput.RuleValue)
-		ruleValueTime := GetTimestampFromRuleString(messageInput.RuleValue)
-		fieldValueTime := messageInput.FieldValue.(time.Time)
-		if fieldValueTime.Before(ruleValueTime) {
+		types["timestamp"]["after_or_equal_date"] = func(messageInput MessageInput) error {
+			err := types["timestamp"]["after_date"](messageInput)
+			if err != nil {
+				return types["timestamp"]["equal_date"](messageInput)
+			}
 			return nil
 		}
-		messageInput.RuleValue = ruleValueTime.Format(TimestampDefaultFormat)
-		messageInput.FieldValue = fieldValueTime.Format(TimestampDefaultFormat)
-		return GenerateErrorMessage(messageInput)
-	}
-	types["timestamp"]["before_date"] = func(messageInput MessageInput) error {
-		PanicOnEmptyRuleValue("before_date", messageInput.RuleValue)
-		ruleValueTime := TruncateTime(GetTimestampFromRuleString(messageInput.RuleValue))
-		fieldValueTime := messageInput.FieldValue.(time.Time)
-		if fieldValueTime.Before(ruleValueTime) {
+		types["timestamp"]["before_or_equal_date"] = func(messageInput MessageInput) error {
+			err := types["timestamp"]["before_date"](messageInput)
+			if err != nil {
+				return types["timestamp"]["equal_date"](messageInput)
+			}
 			return nil
 		}
-		messageInput.RuleValue = ruleValueTime.Format(TimestampDateDefaultFormat)
-		messageInput.FieldValue = fieldValueTime.Format(TimestampDateDefaultFormat)
-		return GenerateErrorMessage(messageInput)
-	}
-	types["timestamp"]["equal_date"] = func(messageInput MessageInput) error {
-		PanicOnEmptyRuleValue("equal_date", messageInput.RuleValue)
-		ruleValueTime := TruncateTime(GetTimestampFromRuleString(messageInput.RuleValue))
-		fieldValueTime := TruncateTime(messageInput.FieldValue.(time.Time))
-		if fieldValueTime.Equal(ruleValueTime) {
-			return nil
-		}
-		messageInput.RuleValue = ruleValueTime.Format(TimestampDateDefaultFormat)
-		messageInput.FieldValue = fieldValueTime.Format(TimestampDateDefaultFormat)
-		return GenerateErrorMessage(messageInput)
-	}
-	types["timestamp"]["equal"] = func(messageInput MessageInput) error {
-		PanicOnEmptyRuleValue("equal", messageInput.RuleValue)
-		ruleValueTime := GetTimestampFromRuleString(messageInput.RuleValue)
-		fieldValueTime := messageInput.FieldValue.(time.Time)
-		if fieldValueTime.Equal(ruleValueTime) {
-			return nil
-		}
-		messageInput.RuleValue = ruleValueTime.Format(TimestampDefaultFormat)
-		messageInput.FieldValue = fieldValueTime.Format(TimestampDefaultFormat)
-		return GenerateErrorMessage(messageInput)
-	}
-	types["timestamp"]["after_or_equal"] = func(messageInput MessageInput) error {
-		err := types["timestamp"]["after"](messageInput)
-		if err != nil {
-			return types["timestamp"]["equal"](messageInput)
-		}
-		return nil
-	}
-	types["timestamp"]["before_or_equal"] = func(messageInput MessageInput) error {
-		err := types["timestamp"]["before"](messageInput)
-		if err != nil {
-			return types["timestamp"]["equal"](messageInput)
-		}
-		return nil
-	}
-	types["timestamp"]["after_or_equal_date"] = func(messageInput MessageInput) error {
-		err := types["timestamp"]["after_date"](messageInput)
-		if err != nil {
-			return types["timestamp"]["equal_date"](messageInput)
-		}
-		return nil
-	}
-	types["timestamp"]["before_or_equal_date"] = func(messageInput MessageInput) error {
-		err := types["timestamp"]["before_date"](messageInput)
-		if err != nil {
-			return types["timestamp"]["equal_date"](messageInput)
-		}
-		return nil
 	}
 	//arrays
-	types["array"] = make(map[string](func(MessageInput) error))
-	types["array"]["max"] = func(messageInput MessageInput) error {
-		PanicOnEmptyRuleValue("max", messageInput.RuleValue)
-		uintRuleValue := GetUintRuleValueOrPanic(messageInput.RuleName, messageInput.RuleValue)
-		if interfaceArrayFieldValue, errFieldValue := GetInterfaceArrayFromInterface(messageInput.FieldValue); errFieldValue != nil {
-			return errFieldValue
-		} else if uint64(len(interfaceArrayFieldValue)) <= uintRuleValue {
-			return nil
+	{
+		types["array"] = make(map[string](func(MessageInput) error))
+		types["array"]["max"] = func(messageInput MessageInput) error {
+			PanicOnEmptyRuleValue("max", messageInput.RuleValue)
+			uintRuleValue := GetUintRuleValueOrPanic(messageInput.RuleName, messageInput.RuleValue)
+			if interfaceArrayFieldValue, errFieldValue := GetInterfaceArrayFromInterface(messageInput.FieldValue); errFieldValue != nil {
+				return errFieldValue
+			} else if uint64(len(interfaceArrayFieldValue)) <= uintRuleValue {
+				return nil
+			}
+			return GenerateErrorMessage(messageInput)
 		}
-		return GenerateErrorMessage(messageInput)
-	}
-	types["array"]["min"] = func(messageInput MessageInput) error {
-		PanicOnEmptyRuleValue("min", messageInput.RuleValue)
-		uintRuleValue := GetUintRuleValueOrPanic(messageInput.RuleName, messageInput.RuleValue)
-		if interfaceArrayFieldValue, errFieldValue := GetInterfaceArrayFromInterface(messageInput.FieldValue); errFieldValue != nil {
-			return errFieldValue
-		} else if uint64(len(interfaceArrayFieldValue)) >= uintRuleValue {
-			return nil
+		types["array"]["min"] = func(messageInput MessageInput) error {
+			PanicOnEmptyRuleValue("min", messageInput.RuleValue)
+			uintRuleValue := GetUintRuleValueOrPanic(messageInput.RuleName, messageInput.RuleValue)
+			if interfaceArrayFieldValue, errFieldValue := GetInterfaceArrayFromInterface(messageInput.FieldValue); errFieldValue != nil {
+				return errFieldValue
+			} else if uint64(len(interfaceArrayFieldValue)) >= uintRuleValue {
+				return nil
+			}
+			return GenerateErrorMessage(messageInput)
 		}
-		return GenerateErrorMessage(messageInput)
-	}
-	types["array"]["distinct"] = func(messageInput MessageInput) error {
-		interfaceArrayFieldValue, errFieldValue := GetInterfaceArrayFromInterface(messageInput.FieldValue)
-		if errFieldValue != nil {
-			return errFieldValue
-		}
-		arrayLen := len(interfaceArrayFieldValue)
-		for i := 0; i < arrayLen-1; i++ {
-			for j := i + 1; j < arrayLen; j++ {
-				if interfaceArrayFieldValue[i] == interfaceArrayFieldValue[j] {
-					return GenerateErrorMessage(messageInput)
+		types["array"]["distinct"] = func(messageInput MessageInput) error {
+			interfaceArrayFieldValue, errFieldValue := GetInterfaceArrayFromInterface(messageInput.FieldValue)
+			if errFieldValue != nil {
+				return errFieldValue
+			}
+			arrayLen := len(interfaceArrayFieldValue)
+			for i := 0; i < arrayLen-1; i++ {
+				for j := i + 1; j < arrayLen; j++ {
+					if interfaceArrayFieldValue[i] == interfaceArrayFieldValue[j] {
+						return GenerateErrorMessage(messageInput)
+					}
 				}
 			}
+			return nil
 		}
-		return nil
-	}
-	types["array"]["required"] = func(messageInput MessageInput) error {
-		messageInput.RuleName = "min"
-		messageInput.RuleValue = "1"
-		return types["array"]["min"](messageInput)
+		types["array"]["required"] = func(messageInput MessageInput) error {
+			messageInput.RuleName = "min"
+			messageInput.RuleValue = "1"
+			return types["array"]["min"](messageInput)
+		}
 	}
 	//required's
-	types["string"]["required_with"] = func(messageInput MessageInput) error {
-		return RequiredWith(messageInput)
-	}
-	types["string"]["required_with_all"] = func(messageInput MessageInput) error {
-		return RequiredWithAll(messageInput)
-	}
-	types["string"]["required_without"] = func(messageInput MessageInput) error {
-		return RequiredWithout(messageInput)
-	}
-	types["string"]["required_without_all"] = func(messageInput MessageInput) error {
-		return RequiredWithoutAll(messageInput)
-	}
-	types["array"]["required_with"] = func(messageInput MessageInput) error {
-		return RequiredWith(messageInput)
-	}
-	types["array"]["required_with_all"] = func(messageInput MessageInput) error {
-		return RequiredWithAll(messageInput)
-	}
-	types["array"]["required_without"] = func(messageInput MessageInput) error {
-		return RequiredWithout(messageInput)
-	}
-	types["array"]["required_without_all"] = func(messageInput MessageInput) error {
-		return RequiredWithoutAll(messageInput)
+	{
+		types["string"]["required_with"] = func(messageInput MessageInput) error {
+			return RequiredWith(messageInput)
+		}
+		types["string"]["required_with_all"] = func(messageInput MessageInput) error {
+			return RequiredWithAll(messageInput)
+		}
+		types["string"]["required_without"] = func(messageInput MessageInput) error {
+			return RequiredWithout(messageInput)
+		}
+		types["string"]["required_without_all"] = func(messageInput MessageInput) error {
+			return RequiredWithoutAll(messageInput)
+		}
+		types["array"]["required_with"] = func(messageInput MessageInput) error {
+			return RequiredWith(messageInput)
+		}
+		types["array"]["required_with_all"] = func(messageInput MessageInput) error {
+			return RequiredWithAll(messageInput)
+		}
+		types["array"]["required_without"] = func(messageInput MessageInput) error {
+			return RequiredWithout(messageInput)
+		}
+		types["array"]["required_without_all"] = func(messageInput MessageInput) error {
+			return RequiredWithoutAll(messageInput)
+		}
 	}
 }
 
+// RequiredWithAll - Not Implement Description
 func RequiredWithAll(messageInput MessageInput) error {
 	PanicOnEmptyRuleValue("required_with_all", messageInput.RuleValue)
 	fieldsNames := GetFieldsNamesFromRuleString(messageInput.RuleValue)
@@ -358,6 +369,7 @@ func RequiredWithAll(messageInput MessageInput) error {
 	return nil
 }
 
+// RequiredWith - Not Implement Description
 func RequiredWith(messageInput MessageInput) error {
 	PanicOnEmptyRuleValue("required_with", messageInput.RuleValue)
 	fieldsNames := GetFieldsNamesFromRuleString(messageInput.RuleValue)
@@ -375,6 +387,7 @@ func RequiredWith(messageInput MessageInput) error {
 	return nil
 }
 
+// RequiredWithout - Not Implement Description
 func RequiredWithout(messageInput MessageInput) error {
 	PanicOnEmptyRuleValue("required_without", messageInput.RuleValue)
 	fieldsNames := GetFieldsNamesFromRuleString(messageInput.RuleValue)
@@ -392,6 +405,7 @@ func RequiredWithout(messageInput MessageInput) error {
 	return nil
 }
 
+// RequiredWithoutAll - Not Implement Description
 func RequiredWithoutAll(messageInput MessageInput) error {
 	PanicOnEmptyRuleValue("required_without", messageInput.RuleValue)
 	fieldsNames := GetFieldsNamesFromRuleString(messageInput.RuleValue)
