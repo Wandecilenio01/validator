@@ -8,6 +8,7 @@ Golang Validator
 * [Custom Validations](#custom-validations)
 * [Custom Messages](#custom-messages)
 * [Message Input](#message-input)
+* [Validate Custom Fields](#validate-custom-fields)
 
 A GoLang validator to validate structs.
 
@@ -34,7 +35,7 @@ func main() {
     onePerson := MyModel{1, "NameofPerson", 21}
     errors := validator.Validate(onePerson, nil)
     if len(errors) > 0 {
-        for err := range errors {
+        for _, err := range errors {
             fmt.Println("Error -> ", err.Error())
         }
     }
@@ -52,7 +53,7 @@ validator.AddCustomValidator("string", "name", func(messageInput validator.Messa
 })
 ```
 
-At that line, ```validator.AddCustomValidator("string", "name" ...```, ```"string"``` is the **[Validator Key Type](#validator-key-types)** and ```"name"``` is the **[Rule](#rules)**, more details about that terms, click on links. More details about rules can be foud in **[Types](#types)**. At the line ```messageInput.FieldValue.(string)``` we have a casting, to get the field value from a **[Message Input](#message-input)**.
+At that line, ```validator.AddCustomValidator("string", "name" ...```, ```"string"``` is the **[Validator Key Type](#validator-key-types)** and ```"name"``` is the **[Rule](#rules)**, more details about that terms, click on links. More details about rules can be found in **[Types](#types)**. At the line ```messageInput.FieldValue.(string)``` we have a casting, to get the field value from a **[Message Input](#message-input)**.
 
 ## Validator Key Types
 
@@ -78,10 +79,10 @@ Below there's a list of validator key type with sublists of rules.
     * **ipv4**: The field value have to be a valid IPv4;
     <!-- * **IPv6**: The field value have to be a valid IPv6; -->
     * **json**: The field value have to be a valid JSON text;
-    * **alpha**: The field value can have only Latin alphabet char's;
+    * **alpha**: The field value can only have Latin alphabet char's;
     * **alpha_num**: Rule *alpha* + numbers;
     * **alpha_dash**: Rule *alpha_num* + '-' + '_';
-    * **alpha_space**: The field value can have only Latin alphabet char's and spaces;
+    * **alpha_space**: The field value can only have Latin alphabet char's and spaces;
     * **alpha_num_space**: Rule *alpha_space* + numbers;
     * **alpha_dash_space**: Rule *alpha_num_space* + '-' + '_';
     * **regex**: The field value have to match the specified regex, ```(regex:^[0-9]*$)```;
@@ -126,7 +127,7 @@ validator.AddCustomValidator("string", "name", func(messageInput validator.Messa
 })
 ```
 
-The line ```validator.AddCustomValidator("string", "name", ...``` we define the validator key type and the rule name for us handler (OBS: The golang-validator don't leave you change the native validators presented in **[section](#validator-key-types)**).
+The line ```validator.AddCustomValidator("string", "name", ...``` we define the validator key type and the rule name for our handler (OBS: The golang-validator doesn't let you change the native validators presented in **[section](#validator-key-types)**).
 
 ## Message Input
 
@@ -150,7 +151,7 @@ type MessageInput struct {
 * **ValidatorKeyType**: Represents the **[Validator Key Type](#validator-key-types)**.
 * **RuleName**: Represents the rule used, more **[info](#validator-key-types)**.
 * **RuleValue**: Represents the rule value used, for example, in ```Name string `struct-validator:"required"` ```, the rule value will be ```required```, more **[info](#validator-key-types)**.
-* **CustomMessages**: Represents the map of messages, the first key represents the field name of mapped struct and the second key represents the name os rule, more **[info](#custom-messages)**.
+* **CustomMessages**: Represents the map of messages, the first key represents the field name of mapped struct and the second key represents the rule name, more **[info](#custom-messages)**.
 
 ## Custom Messages
 
@@ -169,3 +170,53 @@ errors := validator.Validate(onePerson, messages)
 ```
 
 At the line ```"*": map[string]string{ ...``` we are defining messages to every attribute, if you want to define a message to only attribute, you will do like code at ```"Age": map[string]string{...```. In the line ```"min": "The min value for {{.fieldName}} should be ...",``` is defined a message for the ```"min"``` rule, and the ```{{.fieldName}}``` represents the template text.
+
+## Validate Custom Fields
+
+To define custom fields to be validated.
+
+Define your model:
+
+```Golang
+type MyModel struct {
+    ID   int64  `json:"id" struct-validator:"min:3|max:20"`
+    Name string `json:"name"`
+    Age  int64  `json:"age" struct-validator:"min:3|max:20"`
+}
+```
+
+Then execute the validator with your struct:
+
+```Golang
+func main() {
+    onePerson := MyModel{1, "NameofPerson", 21}
+	errors := validator.ValidateFields(onePerson, []string{"id"}, nil)
+	if len(errors) > 0 {
+		for _, err := range errors {
+			fmt.Println("Error -> ", err.Error())
+		}
+	}
+}
+```
+
+Only the fields passed by the string array will be validated (in this example, age will not trigger an error), follow the output of this example:
+
+    Error ->  The ID cannot be less than 3, the value informed was 1.
+
+## Set Tag Name
+
+To define a custom tag name to substitute "struct-validator".
+
+Define your own tag:
+
+    validator.SetTag("validate")
+
+Then define your model with your new tag:
+
+```Golang
+type MyModel struct {
+    ID   int64  `json:"id" validate:"min:3|max:20"`
+    Name string `json:"name"`
+    Age  int64  `json:"age" validate:"min:3|max:20"`
+}
+```
