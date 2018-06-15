@@ -7,9 +7,9 @@ import (
 	"strings"
 )
 
-const (
+var (
 	// TagName - will stay present in struct to apply the validators
-	TagName = "struct-validator"
+	TagName string
 )
 
 var (
@@ -20,6 +20,7 @@ var (
 )
 
 func init() {
+	SetTag("struct-validator")
 	nativeValidatorsKeyType = map[string]string{
 		"int":       "numeric",
 		"int64":     "numeric",
@@ -53,6 +54,7 @@ func Validate(st interface{}, messages map[string]map[string]string) (returnedEr
 	if st == nil {
 		return append(returnedErrors, errors.New("The interface passed is nil"))
 	}
+	flagTag := true
 	stValue := reflect.ValueOf(st)
 	// mount message input list
 	messagesInput := make([]MessageInput, 0)
@@ -60,8 +62,12 @@ func Validate(st interface{}, messages map[string]map[string]string) (returnedEr
 		field := stValue.Field(i)
 		var interfaceValue interface{}
 		if fieldKind := field.Type().Kind(); (reflect.Int <= fieldKind && fieldKind <= reflect.Int64) || fieldKind == reflect.Float32 || fieldKind == reflect.Float64 {
-			//convert int type to float64
-			interfaceValue = float64(field.Int())
+			if fieldKind == reflect.Float32 || fieldKind == reflect.Float64 {
+				interfaceValue = field.Float()
+			} else {
+				//convert int type to float64
+				interfaceValue = float64(field.Int())
+			}
 		} else if reflect.Uint <= fieldKind && fieldKind <= reflect.Uintptr {
 			//convert uint type to uint64
 			interfaceValue = field.Uint()
@@ -79,6 +85,10 @@ func Validate(st interface{}, messages map[string]map[string]string) (returnedEr
 	}
 	//get errors
 	for i := 0; i < stValue.NumField(); i++ {
+		_, tagLookup := stValue.Type().Field(i).Tag.Lookup(TagName)
+		if tagLookup {
+			flagTag = false
+		}
 		messagesInput[i].OthersMessageInput = messagesInput
 		tags := strings.Replace(stValue.Type().Field(i).Tag.Get(TagName), " ", "", -1)
 		// get validator key
@@ -87,6 +97,9 @@ func Validate(st interface{}, messages map[string]map[string]string) (returnedEr
 		}
 		//get errors
 		returnedErrors = append(returnedErrors, checkValidations(tags, messagesInput[i])...)
+	}
+	if flagTag {
+		return append(returnedErrors, errors.New("Not found TAG: "+TagName))
 	}
 	return returnedErrors
 }
@@ -100,7 +113,7 @@ func ValidateFields(st interface{}, fields []string, messages map[string]map[str
 	if len(fields) == 0 {
 		return append(returnedErrors, errors.New("The field \"fields\" cannot be empty"))
 	}
-
+	flagTag := true
 	// Let's convert the array of fields to validate, to map of string and bool
 	namesMap := make(map[string]bool)
 	for _, field := range fields {
@@ -135,6 +148,10 @@ func ValidateFields(st interface{}, fields []string, messages map[string]map[str
 	//get errors
 	if len(messagesInput) > 0 {
 		for i := 0; i < stValue.NumField(); i++ {
+			_, tagLookup := stValue.Type().Field(i).Tag.Lookup(TagName)
+			if tagLookup {
+				flagTag = false
+			}
 			messagesInput[i].OthersMessageInput = messagesInput
 			tags := strings.Replace(stValue.Type().Field(i).Tag.Get(TagName), " ", "", -1)
 			valueTagJSON, validTagJSON := stValue.Type().Field(i).Tag.Lookup("json")
@@ -163,7 +180,9 @@ func ValidateFields(st interface{}, fields []string, messages map[string]map[str
 			returnedErrors = append(returnedErrors, checkValidations(tags, messagesInput[i])...)
 		}
 	}
-
+	if flagTag {
+		return append(returnedErrors, errors.New("Not found TAG: "+TagName))
+	}
 	return returnedErrors
 }
 
@@ -240,4 +259,9 @@ func DelCustomValidator(typeName string, ruleName string) error {
 		delete(types, typeName)
 	}
 	return nil
+}
+
+// SetTag - Seta o valor da tag que receber por parametro.
+func SetTag(tag string) {
+	TagName = tag
 }
