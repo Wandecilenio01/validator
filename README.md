@@ -9,6 +9,7 @@ Golang Validator
 * [Custom Messages](#custom-messages)
 * [Message Input](#message-input)
 * [Validate Custom Fields](#validate-custom-fields)
+* [Set Tag Name](#set-tag-name)
 
 A GoLang validator to validate structs.
 
