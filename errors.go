@@ -31,8 +31,8 @@ func init() {
 		},
 		// string
 		"string": map[string]string{
-			"min":   "The {{.fieldName}} cannot have length less than {{.ruleValue}}, the length of informed value was \"{{.value}}\".",
-			"max":   "The {{.fieldName}} cannot have length greater than {{.ruleValue}}, the length of informed value was \"{{.value}}\".",
+			"min":   "The {{.fieldName}} cannot have length less than {{.ruleValue}}, the informed value was \"{{.value}}\".",
+			"max":   "The {{.fieldName}} cannot have length greater than {{.ruleValue}}, the informed value was \"{{.value}}\".",
 			"email": "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was \"{{.value}}\".",
 			"url":   "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was \"{{.value}}\".",
 			"ipv4":  "The {{.fieldName}} is not a valid {{.ruleName}}, the informed value was \"{{.value}}\".",
