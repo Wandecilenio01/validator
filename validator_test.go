@@ -69,6 +69,7 @@ var (
 		[]error{errors.New("The ID cannot be less than 3, the value informed was 2."), errors.New(`The Name cannot have length less than 1, the informed value was "".`), errors.New("The Age cannot be greater than 20, the value informed was 21."), errors.New(`The Email is not a valid email, the informed value was "as".`), errors.New(`The IPv4 is not a valid ipv4, the informed value was "as".`), errors.New(`The AlphaDashField is not a valid alpha_dash_space, the informed value was "&&&**%%///\\%s".`), errors.New(`The AlphaNumField is not a valid alpha_num_space, the informed value was "&&&**%%///\\".`)},
 		[]error{errors.New("The ID cannot be less than 3, the value informed was 0."), errors.New(`The Name cannot have length less than 1, the informed value was "".`), errors.New("The Age cannot be less than 3, the value informed was 0."), errors.New("The CreateAt have to be after or equals to 2018-6-18, the date informed was 0001-1-1."), errors.New("The Email is not a valid required_without_all, because if all fields: (Site,JSON) are not filled, then Email needs to be filled."), errors.New("The MyIntArray is not a valid required_without_all, because if all fields: (MyFloat32Array,MyUintptrArray) are not filled, then MyIntArray needs to be filled.")},
 		[]error{errors.New("The ID cannot be greater than 20, the value informed was 40."), errors.New("Invalid name.")},
+		[]error{errors.New("The ID cannot be less than 3, the value informed was 1."), errors.New("The Age cannot be greater than 20, the value informed was 21.")},
 	}
 	messagesTest = map[string]map[string]string{
 		"*": map[string]string{
@@ -155,6 +156,33 @@ func TestAddCustomValidator(t *testing.T) {
 	if Validate(testModel, nil) != nil {
 		errorsReceived := Validate(testModel, nil)
 		t.Log("\nIt tests with correct data\n")
+		t.Errorf("\nReceived: %v.\nShould be: nil.\n", errorsReceived)
+	}
+}
+
+func TestSetTag(t *testing.T) {
+	t.Log("\nIt tests if new validator tag is working\n")
+
+	SetTag("validate")
+
+	type MyModel struct {
+		ID   int64  `json:"id" validate:"min:3|max:20"`
+		Name string `json:"name"`
+		Age  int64  `json:"age" validate:"min:3|max:20"`
+	}
+
+	testModel := MyModel{1, "NameofPerson", 21}
+
+	if !(reflect.DeepEqual(Validate(testModel, nil), errorsTest[7])) {
+		t.Log("\nIf working, it'll return some errors.\n")
+		t.Errorf("\nReceived: false.\nShould be: true.\n")
+	}
+
+	testModel = MyModel{4, "NameofPerson", 20}
+
+	if Validate(testModel, nil) != nil {
+		errorsReceived := Validate(testModel, nil)
+		t.Log("\nIf working, it won't return errors.\n")
 		t.Errorf("\nReceived: %v.\nShould be: nil.\n", errorsReceived)
 	}
 }
