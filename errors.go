@@ -91,3 +91,8 @@ func TemplateErrorMessage(messageInput MessageInput) error {
 	}
 	return errors.New(errorMessage.String())
 }
+
+// SetNativeMessages - Sets a custom native message
+func SetNativeMessages(NewNativeMessages map[string]map[string]string) {
+	nativeMessages = NewNativeMessages
+}
