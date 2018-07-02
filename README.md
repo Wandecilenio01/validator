@@ -86,7 +86,7 @@ Below there's a list of validator key type with sublists of rules.
     * **alpha_space**: The field value can only have Latin alphabet char's and spaces;
     * **alpha_num_space**: Rule *alpha_space* + numbers;
     * **alpha_dash_space**: Rule *alpha_num_space* + '-' + '_';
-    * **regex**: The field value have to match the specified regex, ```(regex:^[0-9]*$)```;
+    * **regex**: The field value have to match the specified regex, ```(regex:^[0-9]*$)``` or ```(regex:^((\\d{3}).(\\d{3}).(\\d{3})-(\\d{2}))*$)```;
     * **required**: The field value cannot be empty.
     * **required_with**: The field under validation must be present and not empty only if any of the other specified fields are not empty, ```(required_with:field1,field2)```;
 	* **required_with_all**: The field under validation must be present and not empty only if all of the other specified fields are not empty, ```(required_with_all:field1,field2)```;
