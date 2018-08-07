@@ -127,8 +127,12 @@ func ValidateFields(st interface{}, fields []string, messages map[string]map[str
 		field := stValue.Field(i)
 		var interfaceValue interface{}
 		if fieldKind := field.Type().Kind(); (reflect.Int <= fieldKind && fieldKind <= reflect.Int64) || fieldKind == reflect.Float32 || fieldKind == reflect.Float64 {
-			//convert int type to float64
-			interfaceValue = float64(field.Int())
+			if fieldKind == reflect.Float32 || fieldKind == reflect.Float64 {
+				interfaceValue = field.Float()
+			} else {
+				//convert int type to float64
+				interfaceValue = float64(field.Int())
+			}
 		} else if reflect.Uint <= fieldKind && fieldKind <= reflect.Uintptr {
 			//convert uint type to uint64
 			interfaceValue = field.Uint()
